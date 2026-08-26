@@ -78,7 +78,8 @@ Decided: the scope table above, the name, the license (Apache-2.0), and the stac
 
 Undecided: **every API**. How an agent is declared, whether the project layout is convention- or
 config-driven, how a workflow is expressed, what a channel handler receives, how sandbox providers
-are selected, how evals are written. Design discussion belongs in issues.
+are selected, how evals are written. Design discussion belongs in
+[Discussions](https://github.com/pleaseai/please/discussions/categories/ideas); issues are for bugs.
 
 ## Requirements
 

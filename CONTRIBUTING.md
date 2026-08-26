@@ -4,7 +4,7 @@ Thanks for your interest in contributing! This guide covers how to get from a cl
 
 By participating, you agree to abide by our [Code of Conduct](./CODE_OF_CONDUCT.md). All documentation, code, comments, and commit messages in this repository are written in **English**.
 
-> **Note:** This repository is currently a scaffold. The framework's API, feature set, and architecture have not been designed yet — see the [Status](./README.md#status) section of the README. Design discussion belongs in issues, not in speculative code.
+> **Note:** This repository is currently a scaffold. The framework's API, feature set, and architecture have not been designed yet — see the [Status](./README.md#status) section of the README. Design discussion belongs in [Discussions](https://github.com/pleaseai/please/discussions/categories/ideas), not in speculative code.
 
 ## Getting started
 
@@ -49,4 +49,4 @@ The header is lowercase, imperative mood, no trailing period, and at most 100 ch
 
 ## Reporting bugs and requesting features
 
-Open an issue. For security vulnerabilities, **do not** open a public issue — follow [SECURITY.md](./SECURITY.md).
+Bugs go to [Issues](https://github.com/pleaseai/please/issues); feature requests, ideas, and questions go to [Discussions](https://github.com/pleaseai/please/discussions). For security vulnerabilities, **do not** open a public issue — follow [SECURITY.md](./SECURITY.md).

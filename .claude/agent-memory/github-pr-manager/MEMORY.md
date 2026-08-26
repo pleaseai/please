@@ -1,0 +1,1 @@
+- [please: pending CI secrets](project-standards-setup-pending-secrets.md) — release-please org app creds and SonarCloud/SONAR_TOKEN were unprovisioned as of PR #1

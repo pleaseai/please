@@ -7,3 +7,5 @@ dist/
 .env.*
 coverage/
 .please/state/
+.claude/settings.local.json
+test-report.junit.xml

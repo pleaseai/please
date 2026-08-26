@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+
+  # bun.lock declares lockfileVersion 1, which the bun ecosystem supports.
+  # The workspace has a single root lockfile, so one entry covers every package.
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    labels:
+      - dependencies
+    open-pull-requests-limit: 10
