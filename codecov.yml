@@ -18,5 +18,5 @@ comment:
 # For a monorepo, add `flags:` per package to track coverage separately.
 #
 # Test Analytics needs no config here — it is driven entirely by the CI upload
-# step (codecov/codecov-action@v5 with `report_type: test_results`, reading a
-# JUnit XML report). See references/quality-coverage.md.
+# step in .github/workflows/ci.yml (codecov/codecov-action with
+# `report_type: test_results`, reading a JUnit XML report).

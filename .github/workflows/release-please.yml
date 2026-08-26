@@ -7,6 +7,11 @@ on:
 # The App token carries the write permissions - GITHUB_TOKEN needs none.
 permissions: {}
 
+# Two pushes to main in quick succession would otherwise race on the release PR
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
