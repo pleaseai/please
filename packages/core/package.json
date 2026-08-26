@@ -1,0 +1,37 @@
+{
+  "name": "@pleaseai/core",
+  "type": "module",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pleaseai/please.git",
+    "directory": "packages/core"
+  },
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup --clean",
+    "dev": "tsup --watch",
+    "test": "bun test",
+    "clean": "rm -rf dist .turbo",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^8",
+    "typescript": "^6"
+  }
+}
