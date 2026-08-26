@@ -27,6 +27,7 @@
     "build": "tsup --clean",
     "dev": "tsup --watch",
     "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov --reporter=junit --reporter-outfile=test-report.junit.xml",
     "clean": "rm -rf dist .turbo",
     "type-check": "tsc --noEmit"
   },

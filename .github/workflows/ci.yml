@@ -9,12 +9,24 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions: {}
+
 jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      contents: read
+      id-token: write # Codecov uploads tokenless via OIDC
+    env:
+      # Read at the step level to skip the scan until the secret exists
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # SonarCloud reads history to attribute new code to a commit
+          fetch-depth: 0
+          persist-credentials: false
 
       # Installs the tool versions pinned in mise.toml (bun)
       - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
@@ -28,8 +40,28 @@ jobs:
       - name: Type-check
         run: bun run type-check
 
+      # Emits coverage/lcov.info and test-report.junit.xml per package
       - name: Test
-        run: bun run test
+        run: bun run test:coverage
 
       - name: Build
         run: bun run build
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          files: ./packages/core/coverage/lcov.info
+          use_oidc: true
+
+      # Failed tests are what this reports, so it must run when the suite fails
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          report_type: test_results
+          files: ./packages/core/test-report.junit.xml
+          use_oidc: true
+
+      - name: SonarQube scan
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1

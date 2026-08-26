@@ -1,0 +1,22 @@
+# Codecov config — https://docs.codecov.com/docs/codecov-yaml
+coverage:
+  status:
+    project:
+      default:
+        target: auto # compare against the base commit
+        threshold: 1% # tolerate a small drop without failing
+    patch:
+      default:
+        target: 80% # new/changed lines must meet this coverage
+
+comment:
+  layout: 'reach, diff, flags, files'
+  require_changes: true # only comment when coverage actually changes
+
+# Public repos upload tokenless via OIDC (use_oidc: true in the action).
+# Private repos need the CODECOV_TOKEN secret.
+# For a monorepo, add `flags:` per package to track coverage separately.
+#
+# Test Analytics needs no config here — it is driven entirely by the CI upload
+# step (codecov/codecov-action@v5 with `report_type: test_results`, reading a
+# JUnit XML report). See references/quality-coverage.md.
