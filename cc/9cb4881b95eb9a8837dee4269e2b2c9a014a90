@@ -1,0 +1,71 @@
+.github/workflows/ci.yml
+  s_dc8e1f80c9fd38::t_e559d6a42562ea 1-35
+.gitignore
+  s_dc8e1f80c9fd38::t_87b522a0a1d70e 1-9
+.husky/commit-msg
+  s_dc8e1f80c9fd38::t_0127a6a317d1d7 1
+.husky/pre-commit
+  s_dc8e1f80c9fd38::t_8094e5082182da 1
+.release-please-manifest.json
+  s_dc8e1f80c9fd38::t_3dc170bb4fa7f4 1-3
+CLAUDE.md
+  s_dc8e1f80c9fd38::t_a744ae88b67738 1-65
+CODE_OF_CONDUCT.md
+  s_dc8e1f80c9fd38::t_f3f6634ad8c10e 1-132
+CONTRIBUTING.md
+  s_dc8e1f80c9fd38::t_c643424e6a46be 1-52
+LICENSE
+  s_dc8e1f80c9fd38::t_620fc71ebf0b48 1-202
+NOTICE
+  s_dc8e1f80c9fd38::t_30dda63a8ef743 1-8
+README.ko.md
+  s_dc8e1f80c9fd38::t_a6e88a8b9faf8f 1-69
+README.md
+  s_dc8e1f80c9fd38::t_2121df4cf01482 1-69
+SECURITY.md
+  s_dc8e1f80c9fd38::t_683ac59e04d492 1-39
+bun.lock
+  s_dc8e1f80c9fd38::t_7e32bfd44deaf3 1-992
+bunfig.toml
+  s_dc8e1f80c9fd38::t_d5f374f2d4bc0a 1-3
+commitlint.config.js
+  s_dc8e1f80c9fd38::t_774dc56055656b 1-3
+eslint.config.ts
+  s_dc8e1f80c9fd38::t_b774de04d6763c 1-3
+mise.toml
+  s_dc8e1f80c9fd38::t_9ae7bd6bfbde8a 1-36
+package.json
+  s_dc8e1f80c9fd38::t_9cf490087dfbec 1-38
+packages/core/package.json
+  s_dc8e1f80c9fd38::t_f16e95d35d5ad8 1-37
+packages/core/src/__tests__/index.test.ts
+  s_dc8e1f80c9fd38::t_14cbc4ef9c002f 1-17
+packages/core/src/index.ts
+  s_dc8e1f80c9fd38::t_72d3ea0ac5a3da 1-14
+packages/core/tsconfig.json
+  s_dc8e1f80c9fd38::t_36381b57e28a8f 1-4
+packages/core/tsup.config.ts
+  s_dc8e1f80c9fd38::t_a5b2c8436edb94 1-8
+release-please-config.json
+  s_dc8e1f80c9fd38::t_01ef9cd50765ea 1-12
+tsconfig.base.json
+  s_dc8e1f80c9fd38::t_74592a5029174e 1-16
+turbo.json
+  s_dc8e1f80c9fd38::t_a669bd45b3ac1e 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "cc9cb4881b95eb9a8837dee4269e2b2c9a014a90",
+  "prompts": {},
+  "sessions": {
+    "s_dc8e1f80c9fd38": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a184e4aa-73bf-4b3f-ac27-a9de4a8772f1",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
