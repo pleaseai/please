@@ -1,0 +1,23 @@
+README.ko.md
+  s_dc8e1f80c9fd38::t_962912a560f142 8,10-36,38-44,46,48-51,53-56,58-60,62-63,65-80,88,96,103,107-109,112-117,119-120
+README.md
+  s_dc8e1f80c9fd38::t_a05ddfda73fd1c 8,10-38,40-46,48,50-54,56-60,62-81,113-115,118-123
+docs/prior-art.md
+  s_dc8e1f80c9fd38::t_5133e4647dd09e 1-155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e87847b7baefd1adbff889dcfcaab0ab1422c011",
+  "prompts": {},
+  "sessions": {
+    "s_dc8e1f80c9fd38": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a184e4aa-73bf-4b3f-ac27-a9de4a8772f1",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
