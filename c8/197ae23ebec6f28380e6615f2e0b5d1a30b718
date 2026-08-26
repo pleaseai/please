@@ -1,0 +1,19 @@
+.github/workflows/zizmor.yml
+  s_8ac8864df591d2::t_ff7a27986f8241 1-25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "c8197ae23ebec6f28380e6615f2e0b5d1a30b718",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
