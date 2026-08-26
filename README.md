@@ -5,26 +5,80 @@
 
 English | [한국어](README.ko.md)
 
-An agent framework, by [pleaseai](https://github.com/pleaseai).
+An agent framework that **does not write its own agent loop**.
+
+`please` runs an existing coding-agent harness — Claude Code, OpenCode, Pi — as its runtime, and
+supplies the things a harness has no opinion about: where it executes, how it is reached, and how
+work is sequenced so it survives a crash.
+
+## Why reuse a harness
+
+Frameworks in this space ([eve](https://eve.dev), [flue](https://flueframework.com)) drive a model
+directly and rebuild the surrounding agent: the tool set, the permission prompts, the session and
+resume story, the compaction. That is the part of a coding agent that is already good, already
+maintained upstream, and already familiar to the people who would use this. A reimplementation is a
+worse copy carrying a permanent obligation to chase the original.
+
+Two things follow from reusing the harness instead:
+
+- **Its ecosystem comes along.** Claude Code's tools, permission model, sessions, skills and
+  plugins are the harness's, not ours to re-earn.
+- **It decides the bill.** Driving Claude Code as a harness runs on a Claude Code subscription. A
+  hand-rolled loop against the Messages API bills per token for the same work.
+
+The harness boundary itself is not ours either — it is the AI SDK's
+[harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent) and
+[harness adapters](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-adapters) contract, which
+already normalizes sessions, streamed events, tools, usage and lifecycle across runtimes. `please`
+is what you build *around* a `HarnessAgent`, not a competitor to it.
+
+## Scope
+
+This is the **scope**, not an API. Nothing below is implemented and no signature is settled — see
+[Status](#status).
+
+| Axis | Planned |
+| --- | --- |
+| **Harnesses** | Claude Code, OpenCode (both sandbox-bridged), Pi (host process) — via `@ai-sdk/harness` |
+| **Deploy targets** | Cloudflare, Vercel |
+| **Sandboxes** | Cloudflare Sandbox, [e2b](https://e2b.dev), [Daytona](https://daytona.io), Vercel Sandbox |
+| **Channels** | Slack, GitHub, Linear |
+| **Workflows** | Durable orchestration around agent turns — dispatch, resume, sequence |
+
+Four notes on why the axes are drawn there:
+
+**Harnesses.** The AI SDK's adapter list is broader (Codex, Cursor, Cline, Deep Agents, fx, Grok
+Build, with Amp, Goose and Mastra listed as upcoming). Three is the starting set, not the ceiling;
+the contract is per-adapter, so more is a matter of testing rather than architecture. Claude Code
+and OpenCode run behind a sandbox bridge and therefore need a network-capable sandbox; Pi runs in
+the host process and does not.
+
+**Targets.** Cloudflare and Vercel are both first-class rather than one plus a port. They fail
+differently — a Worker gets platform-managed recovery and a per-invocation CPU limit; a Node-shaped
+deployment gets a real filesystem and owns its own restart reconciliation — and a framework that
+treats one as the real target and the other as an afterthought leaks that asymmetry into every
+feature.
+
+**Sandboxes.** Four providers, because a bridged harness needs a sandbox that can run real
+processes and expose a port, and that requirement is exactly where providers differ. The point of
+having a sandbox contract at all is that this choice stays a deployment decision.
+
+**Channels.** Slack, GitHub and Linear — where work is actually assigned, rather than a chat
+surface bolted on afterwards. Their inbound shapes differ enough (a signed webhook, an event
+stream, a socket) that pretending they are one thing is how the abstraction goes wrong.
 
 ## Status
 
-**This repository is a scaffold.** It contains the toolchain, the license, the CI gates and an empty
-`@pleaseai/core` package — nothing more.
+**Nothing is implemented.** This repository currently holds the toolchain, the license, the CI
+gates, and an empty `@pleaseai/core` that deliberately exports nothing, so no accidental surface can
+be quoted back as if it were settled.
 
-The framework itself has not been designed. Its API, its feature set, its architecture, its
-extension points and its scope are all **undecided**. Nothing in this repository should be read as a
-commitment to any of them, and `packages/core/src/index.ts` deliberately exports nothing so that no
-accidental surface can be quoted back as if it were settled.
+Decided: the scope table above, the name, the license (Apache-2.0), and the stack
+([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)).
 
-What *is* settled:
-
-- The name (`please`) and the org (`pleaseai`).
-- That it is meant to become an agent framework.
-- The license: Apache-2.0.
-- The stack: [Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com).
-
-Everything else is open. Design discussion belongs in issues.
+Undecided: **every API**. How an agent is declared, whether the project layout is convention- or
+config-driven, how a workflow is expressed, what a channel handler receives, how sandbox providers
+are selected, how evals are written. Design discussion belongs in issues.
 
 ## Requirements
 
@@ -56,8 +110,16 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/       # @pleaseai/core — placeholder; exports nothing yet
+  core/           # @pleaseai/core — placeholder; exports nothing yet
+docs/
+  prior-art.md    # what eve, flue and the AI SDK harnesses already do
 ```
+
+## Prior art
+
+[`docs/prior-art.md`](docs/prior-art.md) records what eve and flue actually do — read from their
+own documentation, with dates — so that design arguments here start from what exists rather than
+from recollection.
 
 ## Contributing
 
