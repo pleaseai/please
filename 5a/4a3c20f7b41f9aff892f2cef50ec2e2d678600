@@ -1,0 +1,32 @@
+.github/PULL_REQUEST_TEMPLATE.md
+  s_8ac8864df591d2::t_c1b33d61ee4ca8 1-17
+.github/DISCUSSION_TEMPLATE/ideas.yml
+  s_8ac8864df591d2::t_c1b33d61ee4ca8 1-27
+README.md
+  s_8ac8864df591d2::t_609cbd39291f45 81-82
+.github/ISSUE_TEMPLATE/config.yml
+  s_8ac8864df591d2::t_c1b33d61ee4ca8 1-11
+README.ko.md
+  s_8ac8864df591d2::t_609cbd39291f45 75-76
+.github/ISSUE_TEMPLATE/bug_report.md
+  s_8ac8864df591d2::t_c1b33d61ee4ca8 1-31
+CONTRIBUTING.md
+  s_8ac8864df591d2::t_609cbd39291f45 7
+  s_8ac8864df591d2::t_e877c52ff224ef 52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "5a4a3c20f7b41f9aff892f2cef50ec2e2d678600",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
