@@ -1,0 +1,20 @@
+# Gitignored files to copy into a new worktree.
+#
+# Uses .gitignore syntax. A file is copied only if it matches a pattern below and
+# git actually ignores it, so tracked files are never duplicated.
+#
+# Claude Code --worktree applies this automatically. External worktree tools
+# (orca, conductor) do not, and run @pleaseai/worktreeinclude from a setup hook
+# instead - see orca.yaml.
+
+# Local environment
+.env
+.env.local
+.env.*.local
+
+# Claude Code local settings (permissions, env, internal marketplace)
+.claude/settings.local.json
+
+# Turborepo remote-cache team link. The local cache under .turbo/cache is not
+# listed, so it is not copied - it is large and regenerates on its own.
+.turbo/config.json

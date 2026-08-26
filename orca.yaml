@@ -1,0 +1,14 @@
+# Setup script Orca runs when it creates a worktree.
+#
+# $ORCA_ROOT_PATH     - the main checkout, the source of the copy
+# $ORCA_WORKTREE_PATH - the newly created worktree, the target
+#
+# Orca does not read .worktreeinclude on its own, so the copy is explicit here.
+
+scripts:
+  setup: |
+    set -e
+    mise trust --quiet
+    mise install
+    mise exec -- bunx @pleaseai/worktreeinclude "$ORCA_ROOT_PATH" "$ORCA_WORKTREE_PATH"
+    mise exec -- bun install
