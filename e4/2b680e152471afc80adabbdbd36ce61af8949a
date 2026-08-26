@@ -1,0 +1,25 @@
+.github/workflows/ci.yml
+  s_8ac8864df591d2::t_52b0df6d13fb98 22-24,48-53,57,59,67,75,77-78
+codecov.yml
+  s_8ac8864df591d2::t_0fe89211f1a4ce 21-22
+.github/workflows/release-please.yml
+  s_8ac8864df591d2::t_0fe89211f1a4ce 10-14
+sonar-project.properties
+  s_8ac8864df591d2::t_0fe89211f1a4ce 17-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e42b680e152471afc80adabbdbd36ce61af8949a",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
