@@ -7,7 +7,7 @@ export default pleaseai(
     // Without this, a stray `src/**/*.test.ts` is silently indexed as production
     // code by SonarCloud (`sonar.sources` covers src; `sonar.tests` does not).
     name: 'pleaseai/tests-outside-src',
-    files: ['packages/*/src/**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs}'],
+    files: ['packages/*/src/**/*.{test,spec,bench,test-d,spec-d}.{ts,tsx,js,jsx,mjs,cjs}'],
     rules: {
       'no-restricted-syntax': [
         'error',
