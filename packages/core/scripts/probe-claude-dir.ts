@@ -127,11 +127,19 @@ async function enableCorepack(sandboxId: string): Promise<void> {
 }
 
 const sessionId = `claude-dir-probe-${Date.now()}`
-await enableCorepack(sessionId)
-log('corepack', 'pnpm enabled in the container before the adapter bootstraps')
-const session = await agent.createSession({ sessionId })
+
+// Everything that can create the container lives inside the `try`, including the corepack
+// step: `enableCorepack` acquires the sandbox, so a failure there — or in `createSession` —
+// used to leave a container running with nothing left to destroy it (cubic review, PR #7).
+// The `finally` is written to run before a session exists, which is why `session` is a
+// mutable binding rather than a `const` above.
+let session: Awaited<ReturnType<typeof agent.createSession>> | undefined
 
 try {
+  await enableCorepack(sessionId)
+  log('corepack', 'pnpm enabled in the container before the adapter bootstraps')
+  session = await agent.createSession({ sessionId })
+
   log('turn', 'asking for the codename with every tool disabled')
   const result = await agent.generate({
     session,
@@ -177,7 +185,9 @@ try {
   }
 }
 finally {
-  await session.destroy()
+  // The sandbox is destroyed either way: it exists from the moment `enableCorepack` acquires
+  // it, whether or not a harness session was ever built on top.
+  await session?.destroy()
   await sandboxes.session(sessionId).destroy()
   log('cleanup', 'session and container removed')
 }
