@@ -6,3 +6,16 @@ you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
     http://www.apache.org/licenses/LICENSE-2.0
+
+---
+
+This product includes software originally developed for the internal
+"Agent Please" project (chatbot-pf/pleaseworks) by Passion Factory, Inc.
+and licensed there under the Functional Source License 1.1 (MIT Future
+License). Those portions were relicensed to Apache-2.0 by the copyright
+holder for inclusion here, and are marked with an attribution header in
+the files that carry them:
+
+    packages/core/src/sandbox/contract/**
+    packages/core/src/sandbox/harness/**
+    packages/core/test/sandbox/harness/**

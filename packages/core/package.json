@@ -13,6 +13,16 @@
       "bun": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./sandbox": {
+      "bun": "./src/sandbox/contract/index.ts",
+      "types": "./dist/sandbox/contract/index.d.ts",
+      "import": "./dist/sandbox/contract/index.js"
+    },
+    "./sandbox/harness": {
+      "bun": "./src/sandbox/harness/index.ts",
+      "types": "./dist/sandbox/harness/index.d.ts",
+      "import": "./dist/sandbox/harness/index.js"
     }
   },
   "main": "./dist/index.js",
@@ -31,7 +41,11 @@
     "clean": "rm -rf dist .turbo",
     "type-check": "tsc --noEmit"
   },
+  "dependencies": {
+    "@ai-sdk/harness": "^1.0.91"
+  },
   "devDependencies": {
+    "@ai-sdk/harness-claude-code": "^1.0.94",
     "tsup": "^8",
     "typescript": "^6"
   }
