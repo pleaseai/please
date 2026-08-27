@@ -16,6 +16,7 @@ import { Buffer } from 'node:buffer'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../../../src/sandbox/contract'
 import { createDockerSandbox, isDockerAvailable } from '../../../src/sandbox/docker'
+import { IMAGE_PULL_TIMEOUT_MS, pullSandboxImage, SANDBOX_IMAGE } from './image.fixtures'
 
 const dockerAvailable = await isDockerAvailable()
 const WORK_DIR = '/work'
@@ -47,13 +48,15 @@ suite('docker sandbox backend', () => {
   const sandboxId = `spec-${crypto.randomUUID().slice(0, 8)}`
   let sandboxes: SandboxProvider
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    // Before the first test, never inside one: a cold pull outlasts bun's per-test budget.
+    await pullSandboxImage()
     sandboxes = createDockerSandbox({
-      image: 'debian:bookworm-slim',
+      image: SANDBOX_IMAGE,
       workDir: WORK_DIR,
       ports: [8080],
     })
-  })
+  }, IMAGE_PULL_TIMEOUT_MS)
 
   afterAll(async () => {
     if (dockerAvailable) {

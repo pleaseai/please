@@ -13,6 +13,7 @@ import type { HarnessV1SandboxProvider } from '@ai-sdk/harness'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
 import { createDockerSandbox, isDockerAvailable } from '../../../src/sandbox/docker'
 import { createHarnessSandboxProvider } from '../../../src/sandbox/harness'
+import { IMAGE_PULL_TIMEOUT_MS, pullSandboxImage, SANDBOX_IMAGE } from './image.fixtures'
 
 const dockerAvailable = await isDockerAvailable()
 const WORK_DIR = '/work'
@@ -22,17 +23,18 @@ suite('docker backend through the harness provider', () => {
   const sessionId = `harness-${crypto.randomUUID().slice(0, 8)}`
   let provider: HarnessV1SandboxProvider
 
-  beforeAll(() => {
+  beforeAll(async () => {
+    await pullSandboxImage()
     provider = createHarnessSandboxProvider({
       sandboxes: createDockerSandbox({
-        image: 'debian:bookworm-slim',
+        image: SANDBOX_IMAGE,
         workDir: WORK_DIR,
         ports: [8080],
       }),
       defaultWorkingDirectory: WORK_DIR,
       ports: [8080],
     })
-  })
+  }, IMAGE_PULL_TIMEOUT_MS)
 
   afterAll(async () => {
     if (dockerAvailable) {

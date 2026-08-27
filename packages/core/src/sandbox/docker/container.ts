@@ -158,40 +158,69 @@ async function containerStatus(name: string): Promise<string | undefined> {
 }
 
 /**
+ * Take over a container that already exists, or report that it is no longer there.
+ *
+ * `undefined` means the name vanished between the inspect and the start — another process
+ * removed it, or a create that appeared to conflict had already been torn down. The caller
+ * creates fresh in that case. Answering it is the whole point of this return type: starting
+ * a name that does not exist fails with `No such container` every time it is retried, so a
+ * single lost race would make the sandbox permanently unusable rather than merely late.
+ *
+ * `docker start` on an already-running container succeeds, so skipping it for `running` is
+ * not a correctness fix — it is one fewer daemon round trip on the path every resume takes.
+ */
+async function adopt(
+  name: string,
+  status: string,
+  setup: readonly string[],
+): Promise<string | undefined> {
+  if (status !== 'running') {
+    const started = await runDocker(['start', name])
+    if (started.exitCode !== 0) {
+      if (/no such container/i.test(started.stderr)) {
+        return undefined
+      }
+      throw new DockerCommandError(['start', name], started.exitCode, started.stderr)
+    }
+  }
+  await completeInterruptedSetup(name, setup)
+  return name
+}
+
+/**
  * Create the container, or adopt one that already carries this name.
  *
  * Adoption is what makes a sandbox id resumable across processes: a second process asking
  * for the same id finds the running container instead of colliding with it. A container
  * found stopped is restarted rather than recreated, so its filesystem — and every journal on
  * it — survives.
- */
-/**
- * Take over a container that already exists, starting it only if it is not already running.
  *
- * `docker start` on a running container succeeds, so the skip is not a correctness fix — it
- * is one fewer daemon round trip on the path every resume takes.
+ * Every path through here ends in a usable container or a thrown error — never in a state
+ * that only fails. A create that is interrupted partway (a pull killed by a test timeout, a
+ * cancelled command) leaves nothing to adopt, and the next `ready()` must be free to create
+ * from scratch rather than keep starting a name the daemon has never heard of.
  */
-async function adopt(name: string, status: string, setup: readonly string[]): Promise<string> {
-  if (status !== 'running') {
-    await runDockerOrThrow(['start', name])
-  }
-  await completeInterruptedSetup(name, setup)
-  return name
-}
-
 async function acquire(name: string, options: ContainerOptions): Promise<string> {
   const setup = options.setupCommands ?? []
   const existing = await containerStatus(name)
   if (existing !== undefined) {
-    return adopt(name, existing, setup)
+    const adopted = await adopt(name, existing, setup)
+    if (adopted !== undefined) {
+      return adopted
+    }
   }
   try {
     await runDockerOrThrow(createArgs(name, options))
   }
   catch (cause) {
-    // Lost a race with another process creating the same id: adopt what it made.
+    // Lost a race with another process creating the same id: adopt what it made — unless it
+    // is already gone again, which leaves the original failure as the honest answer.
     if (cause instanceof DockerCommandError && cause.stderr.includes('already in use')) {
-      return adopt(name, await containerStatus(name) ?? 'created', setup)
+      const raced = await containerStatus(name)
+      const adopted = raced === undefined ? undefined : await adopt(name, raced, setup)
+      if (adopted !== undefined) {
+        return adopted
+      }
     }
     throw cause
   }
