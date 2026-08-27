@@ -101,10 +101,15 @@ async function abandonStartedProcess(
   container: string,
   paths: ReturnType<typeof journalPaths>,
 ): Promise<void> {
+  // The marker goes down first, and the journal directory is deliberately left in place to
+  // carry it. In the window this exists for, the wrapper has not written a pid yet — there
+  // is nothing to kill, and the marker is the only thing that can stop it launching at all.
+  // Deleting the directory here would delete the one instruction it is waiting to read.
   const script = [
+    `mkdir -p ${quoteArg(paths.dir)}`,
+    `: > ${quoteArg(paths.abandon)}`,
     `pid=$(cat ${quoteArg(paths.pid)} 2>/dev/null)`,
     'if [ -n "$pid" ] ; then kill -9 "-$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null ; fi',
-    `rm -rf -- ${quoteArg(paths.dir)}`,
   ].join('\n')
   await execScript(container, script).catch(() => undefined)
 }

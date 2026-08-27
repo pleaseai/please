@@ -9,6 +9,10 @@ describe('container naming', () => {
     expect(containerName('run/one')).not.toBe(containerName('run:one'))
   })
 
+  it('keeps projects apart when their prefixes sanitize alike', () => {
+    expect(containerName('run', 'team/a')).not.toBe(containerName('run', 'team:a'))
+  })
+
   it('is stable for one id', () => {
     expect(containerName('run/one')).toBe(containerName('run/one'))
   })

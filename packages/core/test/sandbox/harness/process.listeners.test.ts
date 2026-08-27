@@ -20,6 +20,7 @@
  */
 import type { ProcessLogEvent } from '../../../src/sandbox/contract'
 import { describe, expect, it } from 'bun:test'
+import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../../../src/sandbox/contract'
 import { createProcessSurface } from '../../../src/sandbox/harness/process'
 import { fakeSandboxProvider, FIXTURE_CWD } from './sandbox.fixtures'
 
@@ -206,5 +207,73 @@ describe('createProcessSurface abort listeners when the log stream refuses the s
     // that stopped attaching would pass a bare `live() === 0`.
     expect(listeners.added()).toBe(1)
     expect(listeners.live()).toBe(0)
+  })
+})
+
+/**
+ * And the third state of that listener: taken off once the process is gone, kept while it may
+ * still be running. `wait()` is the only place the difference can be read.
+ *
+ * The two rejection classes are the whole subject here, so both are driven. Detaching on the
+ * wrong one is not a leak but its opposite — the guard dropped while there is still something
+ * to kill — and a test that only pinned the detach would go green for a `wait()` that detached
+ * unconditionally, which is the defect (cubic review, PR #7).
+ */
+describe('createProcessSurface abort listeners once the process has ended', () => {
+  /** Spawn, wait, and report what the caller's signal is still carrying. */
+  async function liveAfterWait(waitRejects?: unknown): Promise<number> {
+    const controller = new AbortController()
+    const listeners = trackListeners(controller.signal)
+    const { provider } = fakeSandboxProvider({
+      script: () => (waitRejects === undefined ? {} : { waitRejects }),
+    })
+    const s = createProcessSurface({
+      sandbox: provider.session('sbx'),
+      defaultWorkingDirectory: FIXTURE_CWD,
+    })
+
+    const spawned = await s.spawn({ command: 'sleep 100', abortSignal: controller.signal })
+    // Attached and then still attached or not, rather than never attached: a surface that
+    // stopped attaching at all would pass every `live() === 0` assertion below for free.
+    expect(listeners.added()).toBe(1)
+    // `await` inside a `try` rather than `.catch`, because the harness types `wait()` as
+    // `PromiseLike`, which carries no `catch` (TS2339) — the same reason {@link bestEffort}
+    // exists one file over.
+    try {
+      await spawned.wait()
+    }
+    catch {}
+    return listeners.live()
+  }
+
+  it('takes its listener back off when the process exits', async () => {
+    expect(await liveAfterWait()).toBe(0)
+  })
+
+  /**
+   * The contract's own words for this error are "the process is already gone and recorded no
+   * exit", which puts it on the same side of the line as an exit: nothing is left to kill, so
+   * the listener is dead weight the caller's signal would carry for the rest of the turn.
+   */
+  it('takes its listener back off when the wait finds no exit record', async () => {
+    expect(await liveAfterWait(new SandboxNoExitRecordError('p1'))).toBe(0)
+  })
+
+  /**
+   * The other side, and the reason the detach is not unconditional. A timeout means the wait
+   * ended and the process did not, so the caller "kills it or waits longer" — and killing it on
+   * a later abort is the only thing this listener was ever attached for.
+   */
+  it('leaves its listener attached when the wait times out', async () => {
+    expect(await liveAfterWait(new SandboxWaitTimeoutError('p1', 5000))).toBe(1)
+  })
+
+  /**
+   * And the fallback branch the contract requires: a rejection that is neither type says
+   * nothing about whether the process is still running, so it is treated as the case where it
+   * might be.
+   */
+  it('leaves its listener attached when the wait fails for some other reason', async () => {
+    expect(await liveAfterWait(new Error('wait transport reset'))).toBe(1)
   })
 })

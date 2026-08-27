@@ -181,7 +181,11 @@ suite('docker sandbox backend', () => {
     // describes the wrapper's direct child — a group kill that missed the `sleep` would
     // leave it running behind an exit code that looked perfectly correct.
     const proc = await session.exec(['sh', '-c', `sleep 60 & echo $! > ${pidFile} ; wait`])
+    const deadline = Date.now() + 10_000
     while (!(await session.exists(pidFile)).exists) {
+      // Bounded, because an unbounded wait for a file that never appears hangs the whole
+      // suite instead of failing this one test.
+      expect(Date.now(), `grandchild never published its pid to ${pidFile}`).toBeLessThan(deadline)
       await Bun.sleep(50)
     }
     const grandchild = (await session.readFile(pidFile)).content.trim()
@@ -192,8 +196,14 @@ suite('docker sandbox backend', () => {
     // `kill -0` cannot answer this: the grandchild is reparented to the container's PID 1
     // — `sleep infinity`, which reaps nothing — so a terminated one lingers as a zombie that
     // still accepts signals. Its scheduler state is what actually distinguishes the two.
-    const probe = await session.exec(['sh', '-c', `sed 's/.*) //' /proc/${grandchild}/stat `
-      + '2>/dev/null | cut -d\' \' -f1 || echo gone'])
+    // The fallback is gated on the state being empty, not on the pipeline failing: when the
+    // stat file is gone `sed` fails but `cut` still exits 0 on empty stdin, so `|| echo gone`
+    // would never run and the probe would print nothing.
+    const probe = await session.exec(['sh', '-c', [
+      `state=$(sed 's/.*) //' /proc/${grandchild}/stat 2>/dev/null | cut -d' ' -f1)`,
+      '[ -n "$state" ] || state=gone',
+      'echo "$state"',
+    ].join('\n')])
     await probe.waitForExit()
     const probeLogs = await drain(await probe.logs({ replay: true }))
 
@@ -289,6 +299,22 @@ suite('docker sandbox backend', () => {
     expect(exit.timedOut).toBe(true)
     expect(Date.now() - startedAt).toBeLessThan(1000)
   })
+
+  it('forces down a command that ignores SIGTERM once its timeout grace expires', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    // GNU `timeout -k` used to supply the escalation; the watchdog has to supply it now, or
+    // a command that traps TERM outlives the timeout and the wait loop never ends.
+    const proc = await session.exec(
+      ['sh', '-c', 'trap \'\' TERM ; while : ; do sleep 1 ; done'],
+      { timeout: 300 },
+    )
+    const exit = await proc.waitForExit({ timeout: 30_000 })
+
+    expect(exit.timedOut).toBe(true)
+    expect(exit.code).toBe(137)
+    expect(exit.signal).toBe(9)
+  }, 40_000)
 
   it('does not mark an ordinary exit as timed out', async () => {
     const session = sandboxes.session(sandboxId)

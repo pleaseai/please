@@ -36,6 +36,8 @@ export interface JournalPaths {
   signal: string
   /** Touched by the watchdog when the process outran its timeout. Presence is the fact. */
   timeout: string
+  /** Written by a caller that gave up before the wrapper launched. Presence cancels it. */
+  abandon: string
 }
 
 /** The paths one process's journal is made of. */
@@ -50,6 +52,7 @@ export function journalPaths(processId: string, root: string = JOURNAL_ROOT): Jo
     exit: `${dir}/exit`,
     signal: `${dir}/signal`,
     timeout: `${dir}/timeout`,
+    abandon: `${dir}/abandon`,
   }
 }
 
@@ -78,16 +81,88 @@ const RECORDED_SIGNALS: ReadonlyArray<readonly [name: string, number: number]> =
   ['TERM', 15],
 ]
 
+/**
+ * Seconds the watchdog waits between its `SIGTERM` and the `SIGKILL` that follows it.
+ *
+ * A command is free to trap or ignore `SIGTERM`, and one that does would otherwise outlive
+ * the timeout it was given — the wrapper's wait loop would keep waiting forever. GNU
+ * `timeout -k` is what used to supply this; running our own watchdog means supplying it here.
+ */
+const KILL_GRACE_SECONDS = '3'
+
 /** Seconds, as a shell literal GNU `sleep` accepts — sub-second timeouts included. */
 function timeoutSeconds(timeoutMs: number): string {
   return (Math.max(1, timeoutMs) / 1000).toFixed(3)
 }
 
 /** The traps that keep the wrapper alive long enough to journal what happened. */
-function trapLines(signalPath: string): string[] {
-  return RECORDED_SIGNALS.map(
-    ([name, number]) => `trap ${quoteArg(`printf '%s' ${number} > ${quoteArg(signalPath)}`)} ${name}`,
-  )
+function trapLines(): string[] {
+  return RECORDED_SIGNALS.map(([name, number]) => `trap 'on_signal ${number}' ${name}`)
+}
+
+/**
+ * The escalation that forces down a command which ignores `SIGTERM`.
+ *
+ * It is spawned from the wrapper's own `TERM` handler rather than started up front, and that
+ * placement is the whole trick: a process created *after* a group signal never receives it,
+ * so this survives the `SIGTERM` it is escalating from without having to ignore it. A
+ * long-lived process that ignores `TERM` inside the exec's session instead makes the daemon
+ * stall every concurrent `docker exec` by two seconds, measured — so "born late" is not just
+ * tidier than `trap '' TERM`, it is the version that does not tax every other call.
+ *
+ * The `SIGKILL` goes to each process individually rather than to the group, because the
+ * wrapper is a member of that group and must live to write the exit record. So the group's
+ * remaining members are read out of `/proc`, skipping the two that have to survive: the
+ * wrapper, and this escalation itself.
+ */
+function escalateFunction(paths: JournalPaths): string[] {
+  return [
+    'escalate() {',
+    `  sleep ${KILL_GRACE_SECONDS}`,
+    // The exit record, not a pid check: a reaped pid can be reused by then, and this file is
+    // the journal's own answer to "is it over".
+    `  if [ -e ${quoteArg(paths.exit)} ] ; then return 0 ; fi`,
+    `  printf '%s' 9 > ${quoteArg(paths.signal)}`,
+    '  read self rest < /proc/self/stat',
+    '  for entry in /proc/[0-9]* ; do',
+    // eslint-disable-next-line no-template-curly-in-string -- shell parameter expansion
+    '    victim=${entry#/proc/}',
+    '    if [ "$victim" != "$wrapper" ] && [ "$victim" != "$self" ] ; then',
+    '      group=$(sed \'s/.*) //\' "$entry/stat" 2>/dev/null | cut -d\' \' -f3)',
+    '      if [ "$group" = "$wrapper" ] ; then kill -9 "$victim" 2>/dev/null ; fi',
+    '    fi',
+    '  done',
+    '}',
+  ]
+}
+
+/** Record the signal that reached the group, and start the escalation when a timeout sent it. */
+function signalFunction(paths: JournalPaths): string[] {
+  return [
+    'on_signal() {',
+    `  printf '%s' "$1" > ${quoteArg(paths.signal)}`,
+    `  if [ "$1" = 15 ] && [ -e ${quoteArg(paths.timeout)} ] ; then`,
+    '    escalate &',
+    '    escalator=$!',
+    '  fi',
+    '}',
+  ]
+}
+
+/**
+ * The timeout watchdog, as shell lines.
+ *
+ * It records *why* it fired before it fires, so a reader never has to infer a timeout from
+ * an exit code, and it signals the whole group so grandchildren go with it. It then dies of
+ * its own signal, which is deliberate: the wrapper's `TERM` handler is what carries the
+ * escalation on from here.
+ */
+function watchdogLines(timeout: number, paths: JournalPaths): string[] {
+  return [
+    `( sleep ${timeoutSeconds(timeout)} ; : > ${quoteArg(paths.timeout)} ; `
+    + 'kill -TERM "-$wrapper" 2>/dev/null ) &',
+    'watchdog=$!',
+  ]
 }
 
 /**
@@ -118,19 +193,17 @@ export function journalledCommand(options: {
   const { paths, command, meta } = options
   const names = RECORDED_SIGNALS.map(([name]) => name).join(' ')
 
-  // The watchdog records *why* it fired before it fires, so a reader never has to infer a
-  // timeout from an exit code. It signals the whole group, so grandchildren go with it.
-  const watchdog = options.timeout === undefined
-    ? []
-    : [
-        `( sleep ${timeoutSeconds(options.timeout)} ; : > ${quoteArg(paths.timeout)} ; `
-        + 'kill -TERM -$$ 2>/dev/null ) &',
-        'watchdog=$!',
-      ]
+  const watchdog = options.timeout === undefined ? [] : watchdogLines(options.timeout, paths)
 
   const inner = [
+    'wrapper=$$',
     `echo $$ > ${quoteArg(paths.pid)}`,
-    ...trapLines(paths.signal),
+    // A caller whose `exec` timed out before this point leaves a marker instead of a kill,
+    // because there is no pid yet to kill. Launching anyway would strand the command.
+    `if [ -e ${quoteArg(paths.abandon)} ] ; then exit 0 ; fi`,
+    ...escalateFunction(paths),
+    ...signalFunction(paths),
+    ...trapLines(),
     `{ trap - ${names} ; exec ${quoteArgv(command)} ; } `
     + `> ${quoteArg(paths.stdout)} 2> ${quoteArg(paths.stderr)} &`,
     'child=$!',
@@ -141,7 +214,10 @@ export function journalledCommand(options: {
     '  wait "$child"',
     '  status=$?',
     'done',
-    ...(options.timeout === undefined ? [] : ['kill "$watchdog" 2>/dev/null || true']),
+    ...(options.timeout === undefined ? [] : ['kill -9 "$watchdog" 2>/dev/null || true']),
+    // Best effort only: an escalation that outlives this finds the exit record below and
+    // returns without touching anything.
+    'if [ -n "$escalator" ] ; then kill -9 "$escalator" 2>/dev/null || true ; fi',
     `echo "$status" > ${quoteArg(paths.exit)}`,
   ].join('\n')
 

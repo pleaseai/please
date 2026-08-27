@@ -27,6 +27,7 @@
  */
 import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
 import type { ProcessLogEvent, SandboxProcessHandle, SandboxSession } from '../contract'
+import { SandboxNoExitRecordError } from '../contract'
 import { bestEffort, nowAborted } from './best-effort'
 
 /** The process half of the harness session. */
@@ -320,21 +321,39 @@ export function createProcessSurface(options: ProcessSurfaceOptions): HarnessPro
       // asks for.
       stdout,
       stderr,
+      // Taken off once the process is genuinely gone, for the reason {@link startProcess}'s own
+      // `detach()` gives: one signal serves a whole turn, so a listener left on it per spawn
+      // retains this handle and its closure for as long as the caller holds the signal, and a
+      // later abort then issues a `kill()` against a process that ended turns ago.
+      //
+      // "Gone" is the test, not "settled", and the contract already draws that line for us. An
+      // exit is one way. {@link SandboxNoExitRecordError} is the other: its own doc says the
+      // process "is already gone and recorded no exit", so there is nothing left for the
+      // listener to kill and the caller has been told to report rather than retry.
+      //
+      // Every *other* rejection keeps the listener, and that asymmetry is the point.
+      // {@link SandboxWaitTimeoutError} means the wait ended and the process did not — the
+      // caller "kills it or waits longer", and killing it on a later abort is exactly this
+      // listener's job. A transport failure says nothing at all about the process, so it falls
+      // to the same branch by the contract's own instruction that the two error types "are not
+      // an exhaustive union, and a caller must keep a fallback branch". `instanceof` rather
+      // than a name comparison, because the class is exported as a value from the contract and
+      // a string test would pass for any impostor carrying the name.
+      //
+      // An aborted wait needs no detach either way: `abort` fired, and `{ once: true }`
+      // collected the listener as it did (cubic review, PR #7).
       wait: async () => {
-        const exit = await waitForProcessExit(handle, abortSignal)
-        // Taken off on the one outcome that is genuinely terminal, for the reason
-        // {@link startProcess}'s own `detach()` gives: one signal serves a whole turn, so a
-        // listener left on it per spawn retains this handle and its closure for as long as the
-        // caller holds the signal, and a later abort then issues a `kill()` against a process
-        // that exited turns ago.
-        //
-        // Only on the successful exit, deliberately. A *rejected* wait is not an exit — a
-        // transport failure mid-wait leaves the command running, and that is exactly the case
-        // the listener exists for, so detaching there would drop the guard while there is still
-        // something to kill. An aborted wait needs no detach either: `abort` fired, and
-        // `{ once: true }` collected the listener as it did (cubic review, PR #7).
-        detach()
-        return exit
+        try {
+          const exit = await waitForProcessExit(handle, abortSignal)
+          detach()
+          return exit
+        }
+        catch (cause) {
+          if (cause instanceof SandboxNoExitRecordError) {
+            detach()
+          }
+          throw cause
+        }
       },
       kill: () => handle.kill(),
     }
