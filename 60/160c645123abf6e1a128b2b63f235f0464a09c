@@ -1,0 +1,21 @@
+docs/prior-art.md
+  s_8ac8864df591d2::t_6c7d1efca5ece1 124-129,180-181,184-194,206-209
+  s_8ac8864df591d2::t_e56f960ad1e02a 6-10,52-111
+  s_8ac8864df591d2::t_8e24fc74992a30 112,210,239-250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "60160c645123abf6e1a128b2b63f235f0464a09c",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
