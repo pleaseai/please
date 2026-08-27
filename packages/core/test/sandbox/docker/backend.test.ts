@@ -314,6 +314,30 @@ suite('docker sandbox backend', () => {
     expect(Date.now() - startedAt).toBeLessThan(15_000)
   }, 40_000)
 
+  it('forces down a command that ignores SIGTERM once its timeout grace expires', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    // The only test that reaches the escalation. Every other timeout test uses a command that
+    // dies of the watchdog's `SIGTERM`, and so stops one step short: the branch that spawns
+    // `escalate`, waits out `KILL_GRACE_SECONDS`, and walks `/proc` to `kill -9` the group's
+    // remaining members never runs. GNU `timeout -k` used to supply that step; since the
+    // watchdog replaced it, a regression here means a command that ignores `SIGTERM` outlives
+    // its timeout and the wrapper's wait loop never ends — every `waitForExit` on that
+    // container then fails with a wait timeout instead.
+    const proc = await session.exec(
+      ['sh', '-c', 'trap \'\' TERM ; while : ; do sleep 1 ; done'],
+      { timeout: 300 },
+    )
+    const exit = await proc.waitForExit({ timeout: 30_000 })
+
+    // 137 is `128 + 9`, and the `signal` record is what proves the 9 rather than a command
+    // that merely returned 137 — the two are indistinguishable from the exit code alone.
+    // Reaching either at all requires the escalation: a trapped `SIGTERM` cannot produce them.
+    expect(exit.timedOut).toBe(true)
+    expect(exit.code).toBe(137)
+    expect(exit.signal).toBe(9)
+  }, 40_000)
+
   it('does not mark an ordinary exit as timed out', async () => {
     const session = sandboxes.session(sandboxId)
 
