@@ -13,6 +13,11 @@ Workspaces:
 
 - `packages/core` (`@pleaseai/core`) — the one package. `src/index.ts` intentionally exports nothing.
 
+**Tests live outside `src`.** Each package keeps its sources in `src/` and its tests in a
+sibling `test/` directory — never colocated, never in a nested `__tests__/`. The type-check
+covers both (`include: ["src", "test"]`), and SonarCloud's `sonar.sources` / `sonar.tests`
+read the two directories directly, so the split is what keeps those sets disjoint.
+
 ## Package Manager
 
 Always use **bun** instead of npm or pnpm, and **bunx** instead of npx or pnpm dlx.
