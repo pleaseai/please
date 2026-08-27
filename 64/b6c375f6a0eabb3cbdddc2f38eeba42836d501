@@ -1,0 +1,19 @@
+packages/core/test/sandbox/docker/backend.test.ts
+  s_73d750f80c9b94::t_4f21a6e8aaa917 317-340
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "64b6c375f6a0eabb3cbdddc2f38eeba42836d501",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
