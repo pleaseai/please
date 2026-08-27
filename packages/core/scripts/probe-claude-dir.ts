@@ -52,13 +52,7 @@ if (!CREDENTIALS.some(name => process.env[name])) {
   process.exit(0)
 }
 
-const sandboxes = createDockerSandbox({
-  image: IMAGE,
-  workDir: WORK_DIR,
-  ports: [8080],
-  // The adapter's bootstrap runs `pnpm`, which the official node images ship only via corepack.
-  setupCommands: ['corepack enable pnpm'],
-})
+const sandboxes = createDockerSandbox({ image: IMAGE, workDir: WORK_DIR, ports: [8080] })
 const sandbox = createHarnessSandboxProvider({
   sandboxes,
   defaultWorkingDirectory: WORK_DIR,
@@ -111,7 +105,30 @@ const agent = new HarnessAgent({
   },
 })
 
+/**
+ * Put `pnpm` on PATH before anything asks for it.
+ *
+ * The adapter's bootstrap runs `pnpm install`, and the official node images ship pnpm only
+ * through corepack — so something has to enable it *first*. Neither sandbox hook can:
+ * `onSession` runs after the adapter has started, and `onBootstrap` is documented as running
+ * "after the harness adapter's own bootstrap has run". Nothing in the harness precedes it.
+ *
+ * The sandbox does. `createSession` resolves the container by session id, and the contract
+ * session for that same id is the same container — so acquiring it here and running corepack
+ * lands before the harness has looked at it. This is what `probe-adapter-bootstrap.ts` already
+ * does with `session.run`; it is the image's business, not the framework's.
+ */
+async function enableCorepack(sandboxId: string): Promise<void> {
+  const proc = await sandboxes.session(sandboxId).exec(['sh', '-c', 'corepack enable pnpm'])
+  const exit = await proc.waitForExit()
+  if (exit.code !== 0) {
+    throw new Error(`corepack enable pnpm failed in the sandbox (exit ${exit.code})`)
+  }
+}
+
 const sessionId = `claude-dir-probe-${Date.now()}`
+await enableCorepack(sessionId)
+log('corepack', 'pnpm enabled in the container before the adapter bootstraps')
 const session = await agent.createSession({ sessionId })
 
 try {

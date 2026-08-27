@@ -125,7 +125,10 @@ async function getProcess(
     return null
   }
   const paths = journalPaths(processId)
-  const probe = await execInContainer(container, ['test', '-d', paths.dir])
+  const probe = await execScript(
+    container,
+    `[ -d ${quoteArg(paths.dir)} ] && [ ! -e ${quoteArg(paths.abandon)} ]`,
+  )
   if (probe.exitCode !== 0) {
     return null
   }
@@ -144,7 +147,17 @@ async function listProcesses(handle: ContainerHandle): Promise<ProcessStatus[]> 
   if (container === undefined) {
     return []
   }
-  const listing = await execScript(container, `ls -1 ${JOURNAL_ROOT} 2>/dev/null || true`)
+  // Abandoned journals are skipped rather than deleted. The marker is what a wrapper still
+  // starting up reads to know not to launch, so removing it would reintroduce the race it
+  // exists to close — but a command that never ran is not a process, and reporting it as one
+  // would give every later `listProcesses()` a permanent phantom in the `error` state.
+  const listing = await execScript(container, [
+    `for dir in ${JOURNAL_ROOT}/*/ ; do`,
+    '  [ -d "$dir" ] || continue',
+    '  [ -e "$dir/abandon" ] && continue',
+    '  basename "$dir"',
+    'done 2>/dev/null || true',
+  ].join('\n'))
   const ids = listing.stdout.split('\n').map(id => id.trim()).filter(id => id.length > 0)
 
   return Promise.all(ids.map(async (id) => {

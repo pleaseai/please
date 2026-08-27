@@ -44,8 +44,11 @@ function shortDigest(value: string): string {
  */
 export function containerName(sandboxId: string, prefix = 'please'): string {
   const safePrefix = sanitize(prefix).replace(/^[^a-z0-9]+/i, '') || 'please'
-  // NUL cannot occur in either half, so the pair cannot be re-split into a different pair.
-  return `${safePrefix}-${sanitize(sandboxId)}-${shortDigest(`${prefix}\u0000${sandboxId}`)}`
+  // `JSON.stringify` of the pair rather than a joined string: a separator character can occur
+  // inside either half — NUL included, JS strings being arbitrary UTF-16 — and a join is only
+  // injective if it cannot. JSON escapes whatever would be ambiguous, so distinct pairs always
+  // produce distinct input here.
+  return `${safePrefix}-${sanitize(sandboxId)}-${shortDigest(JSON.stringify([prefix, sandboxId]))}`
 }
 
 export interface ContainerOptions {
@@ -59,16 +62,6 @@ export interface ContainerOptions {
   env?: Readonly<Record<string, string>>
   /** Container user. Unset uses the image's own `USER`. */
   user?: string
-  /**
-   * Commands run once, in order, immediately after the container is created.
-   *
-   * This is the only hook that lands *before* a harness adapter's own bootstrap: the framework
-   * passes that bootstrap in as `onFirstCreate`, so anything the recipe depends on — `pnpm` on
-   * the official node images, for instance, which ships only through corepack — has to be in
-   * place by the time the container is handed over. A container adopted rather than created
-   * does not re-run them.
-   */
-  setupCommands?: readonly string[]
 }
 
 function createArgs(name: string, options: ContainerOptions): string[] {
@@ -90,67 +83,6 @@ function createArgs(name: string, options: ContainerOptions): string[] {
   return args
 }
 
-/**
- * Marker inside the container saying its setup started and has not finished.
- *
- * Removal after a failed setup can itself fail — a daemon hiccup, a container the runtime
- * refuses to reap — and adoption does not re-run setup, so the next acquisition would hand
- * back a half-built sandbox that looks complete. The marker is what survives that: it lives
- * on the container's own filesystem, so whoever adopts it can see the setup never finished.
- */
-const SETUP_MARKER = '/tmp/.please-setup-incomplete'
-
-/** Run the caller's one-time setup, failing loudly rather than leaving a half-built image. */
-async function runSetup(name: string, commands: readonly string[]): Promise<void> {
-  for (const command of commands) {
-    const result = await runDocker(['exec', name, 'sh', '-c', command])
-    if (result.exitCode !== 0) {
-      throw new Error(
-        `setup command failed in '${name}' (exit ${result.exitCode}): ${command}\n${result.stderr.trim()}`,
-      )
-    }
-  }
-}
-
-/**
- * Run setup under the marker, and take the container away if it fails.
- *
- * Removal failure is reported rather than swallowed, and is survivable either way: the
- * marker is still on the container, so a later adoption re-runs setup instead of trusting it.
- */
-async function performSetup(name: string, commands: readonly string[]): Promise<void> {
-  if (commands.length === 0) {
-    return
-  }
-  await runDockerOrThrow(['exec', name, 'sh', '-c', `: > ${SETUP_MARKER}`])
-  try {
-    await runSetup(name, commands)
-  }
-  catch (cause) {
-    const removal = await runDocker(['rm', '--force', '--volumes', name])
-    if (removal.exitCode !== 0 && !/no such container/i.test(removal.stderr)) {
-      throw new Error(
-        `setup failed in '${name}' and the container could not be removed `
-        + `(exit ${removal.exitCode}): ${removal.stderr.trim()}`,
-        { cause },
-      )
-    }
-    throw cause
-  }
-  await runDockerOrThrow(['exec', name, 'sh', '-c', `rm -f ${SETUP_MARKER}`])
-}
-
-/** Re-run setup on an adopted container whose own setup never finished. */
-async function completeInterruptedSetup(name: string, commands: readonly string[]): Promise<void> {
-  if (commands.length === 0) {
-    return
-  }
-  const probe = await runDocker(['exec', name, 'test', '-e', SETUP_MARKER])
-  if (probe.exitCode === 0) {
-    await performSetup(name, commands)
-  }
-}
-
 /** The container's state as the daemon reports it, or undefined when there is none. */
 async function containerStatus(name: string): Promise<string | undefined> {
   const result = await runDocker(['container', 'inspect', '--format', '{{.State.Status}}', name])
@@ -169,21 +101,17 @@ async function containerStatus(name: string): Promise<string | undefined> {
  * `docker start` on an already-running container succeeds, so skipping it for `running` is
  * not a correctness fix — it is one fewer daemon round trip on the path every resume takes.
  */
-async function adopt(
-  name: string,
-  status: string,
-  setup: readonly string[],
-): Promise<string | undefined> {
-  if (status !== 'running') {
-    const started = await runDocker(['start', name])
-    if (started.exitCode !== 0) {
-      if (/no such container/i.test(started.stderr)) {
-        return undefined
-      }
-      throw new DockerCommandError(['start', name], started.exitCode, started.stderr)
-    }
+async function adopt(name: string, status: string): Promise<string | undefined> {
+  if (status === 'running') {
+    return name
   }
-  await completeInterruptedSetup(name, setup)
+  const started = await runDocker(['start', name])
+  if (started.exitCode !== 0) {
+    if (/no such container/i.test(started.stderr)) {
+      return undefined
+    }
+    throw new DockerCommandError(['start', name], started.exitCode, started.stderr)
+  }
   return name
 }
 
@@ -201,10 +129,9 @@ async function adopt(
  * from scratch rather than keep starting a name the daemon has never heard of.
  */
 async function acquire(name: string, options: ContainerOptions): Promise<string> {
-  const setup = options.setupCommands ?? []
   const existing = await containerStatus(name)
   if (existing !== undefined) {
-    const adopted = await adopt(name, existing, setup)
+    const adopted = await adopt(name, existing)
     if (adopted !== undefined) {
       return adopted
     }
@@ -217,16 +144,13 @@ async function acquire(name: string, options: ContainerOptions): Promise<string>
     // is already gone again, which leaves the original failure as the honest answer.
     if (cause instanceof DockerCommandError && cause.stderr.includes('already in use')) {
       const raced = await containerStatus(name)
-      const adopted = raced === undefined ? undefined : await adopt(name, raced, setup)
+      const adopted = raced === undefined ? undefined : await adopt(name, raced)
       if (adopted !== undefined) {
         return adopted
       }
     }
     throw cause
   }
-  // A container whose setup failed is a half-built sandbox that no later `ready()` would
-  // ever finish on its own, so `performSetup` takes it away and marks it if it cannot.
-  await performSetup(name, setup)
   return name
 }
 
