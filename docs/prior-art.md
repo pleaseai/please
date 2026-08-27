@@ -3,6 +3,10 @@
 What the neighbouring frameworks actually do, read from their own documentation rather than from
 recollection, so that design arguments here start from what exists.
 
+Where a claim here was **measured** rather than read, it says so and names the script that measured
+it. Documentation and implementation had already diverged in several places by 2026-08-27, so the
+distinction between "the page says" and "a live run showed" is load-bearing in this file.
+
 The flue and eve sections were first read **2026-08-26** and extended **2026-08-27**. The AI SDK
 harness contract was re-read and expanded **2026-08-27** across the overview, harness agent,
 adapters, tools, skills, workflow utilities, terminal UI and Claude Code adapter pages; the `ui`
@@ -116,6 +120,11 @@ Source: [Claude Code adapter](https://ai-sdk.dev/providers/ai-sdk-harnesses/clau
 `enabled` and `adaptive`, defaulting to adaptive/summarized), `port`, `startupTimeoutMs` and
 `mintBridgeToken`.
 
+Reading the shipped source rather than the page adds two the page omits: **`effort`**
+(`'low' | 'medium' | 'high' | 'xhigh' | 'max'`, forwarded to the Agent SDK only when set) and
+**`portEndpoint`**, required together with `port` when the sandbox session is a basic one that
+cannot resolve its own ports.
+
 The adapter is built on `@anthropic-ai/claude-agent-sdk` — not the Claude Code CLI — and installs
 its bridge dependencies inside the sandbox when the first session begins, then talks to the host
 over a sandbox-exposed WebSocket.
@@ -124,13 +133,48 @@ over a sandbox-exposed WebSocket.
 plugins, subagents, hooks, slash commands, settings-source selection, or allowed/disallowed tool
 lists. None of these appear as adapter settings.
 
-This is load-bearing and uncomfortable, because the README argues that reusing the harness brings
-its ecosystem along. Measured against the contract as documented, that holds for the built-in tools,
-the native conversation state and compaction, and the session/resume story — and does not hold for
-skills, which have to be rebuilt as inline objects; for the permission model, which flattens to
-three values; or for plugins, which the contract does not mention at all. Whether a `.claude`
-directory seeded into the workspace by `onSession` is read by the Agent SDK is **not documented
-either way**, and is worth verifying against the real package before any design leans on it.
+This looked load-bearing and uncomfortable, because the README argues that reusing the harness
+brings its ecosystem along, and the adapter's *settings* do not carry any of it. The settings are
+the wrong place to look: see the measurement below, which is what actually settles it.
+
+### What the source says, and what a live run measured (2026-08-27)
+
+The package ships its `src/`, so these are read from the implementation rather than the page.
+
+**The bridge never passes `settingSources`.** `src/bridge/index.ts` builds its `claudeSdk.query()`
+options without that key, and Agent SDK `0.3.213` documents the omitted default as *"all sources
+are loaded (matches CLI defaults) ... Must include `'project'` to load CLAUDE.md files."* So the
+session workdir's `.claude/` and `CLAUDE.md` are in scope by default.
+
+**Measured, not inferred.** `packages/core/scripts/probe-claude-dir.ts` seeds a `CLAUDE.md`
+carrying a unique codename and a `.claude/settings.json` declaring a `SessionStart` hook, then
+runs one turn with **`activeTools: []`** — every built-in tool disabled, so the model cannot open
+the file to answer. It replied with the codename verbatim, made **zero tool calls**, and the
+hook's marker file existed afterwards. Two independent proofs: one the model could not have
+obtained by reading, one it could not fabricate at all.
+
+**So the honest split is narrower than "not in the contract".** Skills, the permission mode and
+the adapter's own settings are one surface; the `.claude` directory the runtime reads at startup
+is another, and the second is reachable through `onSession`. Hooks are the demonstrated case.
+Subagents (`.claude/agents/`), slash commands and plugins live in that same directory and are
+therefore *likely* to work, but nothing here has measured them — the distinction is worth keeping
+in any design that leans on them.
+
+**Other details the page omits.** Skills do not stay inline: the adapter writes each one to
+`$HOME/.claude/skills/<name>/SKILL.md` and then runs the query with `skills: 'all'`, because the
+Agent SDK treats a `string[]` as an allowlist that would hide bundled defaults. `instructions`
+becomes `systemPrompt: { type: 'preset', preset: 'claude_code', append }`. Structured output maps
+to `outputFormat: { type: 'json_schema' }`. `permissionMode: 'allow-all'` with nothing filtered
+becomes `bypassPermissions`. And the adapter **already occupies the `PostCompact` hook** itself,
+to capture the compaction summary the `compact_boundary` message does not carry.
+
+**What a sandbox has to provide.** The bootstrap recipe writes the bridge assets, runs
+`pnpm install --frozen-lockfile --store-dir .pnpm-store`, then proves the install with
+`./node_modules/.bin/claude --version` — installing `@anthropic-ai/claude-code` inside the
+sandbox. The image therefore needs node >= 22, pnpm and registry egress. The bridge binds
+`0.0.0.0`, takes its port from `BRIDGE_WS_PORT`, and is spawned as
+`node <bootstrapDir>/bridge.mjs --workdir <workDir> --bridge-state-dir <dir>`. `@ai-sdk/sandbox-just-bash`
+therefore **cannot** run it: it exposes no ports, which every bridged adapter needs.
 
 **What this means for `please`:** the agent loop, the adapter contract, and structured output are
 already someone else's problem. What is left is placement (which sandbox, which target), reach
@@ -273,5 +317,10 @@ wherever the application runs, so the same authored directory behaves differentl
 per-invocation CPU limit than on a Node deployment with a real filesystem. Files reach the runtime by
 three different routes with three different lifetimes — inline `skills`, per-session `onSession`
 writes, and snapshot-baked `onBootstrap` output — so a layout that files them together hides which
-is which. And whether an adapter-native `.claude` directory means anything once seeded is unverified,
-which is the single question most worth answering before the layout is settled.
+is which.
+
+The question that was open here — whether an adapter-native `.claude` directory means anything once
+seeded — has since been **measured, and it does**. See "What the source says, and what a live run
+measured" above. What that opens in turn is question 2 from
+[`project-layout.md`](./project-layout.md): a seeded settings file and `permissionMode` now
+genuinely describe the same thing twice, and one of them has to win.

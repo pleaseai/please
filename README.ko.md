@@ -25,9 +25,10 @@
 - **청구서를 결정한다.** Claude Code를 하네스로 구동하면 Claude Code 구독으로 돈다. 직접 만든 루프를
   Messages API에 물리면 같은 일을 토큰 단위로 청구한다.
 
-딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 인라인 객체로 다시 만들어야 하고, 권한 모델은 세 가지
-모드로 납작해지며, 플러그인·훅·서브에이전트는 계약에 아예 없다 —
-[`docs/project-layout.md`](docs/project-layout.md) 참고.
+딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 디렉터리에서 읽히는 대신 인라인 객체로 넘겨야 하고,
+권한 모델은 세 가지 모드로 납작해진다. 훅은 흥미로운 경우다 — 어댑터 *설정*에는 없지만, 세션 작업
+디렉터리에 심은 `.claude/settings.json`은 실제로 읽히고 거기 선언한 훅은 실행된다. 실행 프로브로
+측정한 결과다. [`docs/project-layout.md`](docs/project-layout.md) 참고.
 
 하네스 경계 자체도 우리 것이 아니다 — AI SDK의
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent)와
@@ -68,15 +69,26 @@
 
 ## 상태
 
-**구현된 것은 없다.** 현재 이 저장소에는 툴체인, 라이선스, CI 게이트, 그리고 아무것도 export 하지 않는
-빈 `@pleaseai/core`만 있다. 우연히 생긴 표면이 확정된 것처럼 인용되는 일을 막으려고 일부러 비워 뒀다.
+**프레임워크 API는 아직 설계되지 않았다.** `@pleaseai/core`의 루트 export는 일부러 비어 있다. 우연히
+생긴 표면이 확정된 것처럼 인용되는 일을 막기 위해서다.
+
+한 계층만 존재한다. 열린 질문들을 그것 없이는 답할 수 없었기 때문이다 — **샌드박스**다. 루트가 아니라
+전용 서브패스로만 닿는다.
+
+| 서브패스 | 무엇인가 |
+| --- | --- |
+| `@pleaseai/core/sandbox` | 백엔드 계약 — 벤더 중립 타입 |
+| `@pleaseai/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
+| `@pleaseai/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
+
+하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
+호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
 
 정해진 것: 위 범위 표, 이름, 라이선스(Apache-2.0), 스택([Bun](https://bun.sh), TypeScript,
-[Turborepo](https://turborepo.com)).
+[Turborepo](https://turborepo.com)), 그리고 위의 샌드박스 분리.
 
-정해지지 않은 것: **모든 API.** 에이전트를 어떻게 선언하는지, 프로젝트 레이아웃이 컨벤션 기반인지
-설정 기반인지, 워크플로를 어떻게 표현하는지, 채널 핸들러가 무엇을 받는지, 샌드박스 프로바이더를
-어떻게 고르는지, eval을 어떻게 쓰는지. 설계 논의는
+정해지지 않은 것: **나머지 API.** 에이전트를 어떻게 선언하는지, 프로젝트 레이아웃이 컨벤션 기반인지
+설정 기반인지, 워크플로를 어떻게 표현하는지, 채널 핸들러가 무엇을 받는지, eval을 어떻게 쓰는지. 설계 논의는
 [Discussions](https://github.com/pleaseai/please/discussions/categories/ideas)에서 한다. 이슈는 버그 보고용이다.
 
 ## 요구사항
@@ -109,10 +121,23 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/           # @pleaseai/core — 플레이스홀더, 아직 아무것도 export 하지 않는다
+  core/                      # @pleaseai/core — 루트 export는 일부러 비어 있다
+    src/sandbox/
+      contract/              # 백엔드 계약
+      harness/               # 그 계약 위의 HarnessV1SandboxProvider
+      docker/                # 로컬 Docker 백엔드 (호스트 전용)
+    scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
 docs/
-  prior-art.md       # eve, flue, AI SDK 하네스가 이미 하고 있는 것
-  project-layout.md  # 레이아웃 제안과, 그것이 기다리는 열린 질문들
+  prior-art.md               # eve, flue, AI SDK 하네스가 이미 하고 있는 것
+  project-layout.md          # 레이아웃 제안과, 그것이 기다리는 열린 질문들
+```
+
+`packages/core/scripts/` 아래 두 프로브는 실행할 수 있고, 각각 문서가 아니면 추측에 그쳤을 질문에
+답한다.
+
+```bash
+bun run packages/core/scripts/probe-adapter-bootstrap.ts  # 자격 증명 불필요
+bun run packages/core/scripts/probe-claude-dir.ts         # Anthropic 자격 증명 필요
 ```
 
 ## 선행 사례

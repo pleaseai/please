@@ -27,9 +27,11 @@ Two things follow from reusing the harness instead:
 - **It decides the bill.** Driving Claude Code as a harness runs on a Claude Code subscription. A
   hand-rolled loop against the Messages API bills per token for the same work.
 
-What does *not* come along is on the record too: skills have to be rebuilt as inline objects, the
-permission model flattens to three modes, and plugins, hooks and subagents are absent from the
-contract — see [`docs/project-layout.md`](docs/project-layout.md).
+What does *not* come along is on the record too: skills have to be handed over as inline objects
+rather than read from a directory, and the permission model flattens to three modes. Hooks are the
+interesting case — they are absent from the adapter's *settings*, but a `.claude/settings.json`
+seeded into the session workdir is read and a hook declared there runs, which a live probe
+measured. See [`docs/project-layout.md`](docs/project-layout.md).
 
 The harness boundary itself is not ours either — it is the AI SDK's
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent) and
@@ -74,16 +76,28 @@ stream, a socket) that pretending they are one thing is how the abstraction goes
 
 ## Status
 
-**Nothing is implemented.** This repository currently holds the toolchain, the license, the CI
-gates, and an empty `@pleaseai/core` that deliberately exports nothing, so no accidental surface can
-be quoted back as if it were settled.
+**The framework API is still undesigned.** `@pleaseai/core`'s root export is deliberately empty,
+so no accidental surface can be quoted back as if it were settled.
 
-Decided: the scope table above, the name, the license (Apache-2.0), and the stack
-([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)).
+One layer does exist, because it was the layer the open questions could not be answered without: the
+**sandbox**. It is reached through its own subpath exports, never the root.
 
-Undecided: **every API**. How an agent is declared, whether the project layout is convention- or
-config-driven, how a workflow is expressed, what a channel handler receives, how sandbox providers
-are selected, how evals are written. Design discussion belongs in
+| Subpath | What it is |
+| --- | --- |
+| `@pleaseai/core/sandbox` | the backend contract — vendor-neutral types |
+| `@pleaseai/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
+| `@pleaseai/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
+
+Splitting the harness translation from the backends is what keeps a second backend from re-deriving
+it, and the subpaths are what keep host-only code out of a target that cannot run it.
+
+Decided: the scope table above, the name, the license (Apache-2.0), the stack
+([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)), and the sandbox split
+described above.
+
+Undecided: **the rest of the API**. How an agent is declared, whether the project layout is
+convention- or config-driven, how a workflow is expressed, what a channel handler receives, how
+evals are written. Design discussion belongs in
 [Discussions](https://github.com/pleaseai/please/discussions/categories/ideas); issues are for bugs.
 
 ## Requirements
@@ -116,10 +130,23 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/           # @pleaseai/core — placeholder; exports nothing yet
+  core/                      # @pleaseai/core — root export is deliberately empty
+    src/sandbox/
+      contract/              # the backend contract
+      harness/               # HarnessV1SandboxProvider over that contract
+      docker/                # local Docker backend (host-only)
+    scripts/                 # probes that measure the runtime rather than assume it
 docs/
-  prior-art.md       # what eve, flue and the AI SDK harnesses already do
-  project-layout.md  # a proposed layout, and the open questions it waits on
+  prior-art.md               # what eve, flue and the AI SDK harnesses already do
+  project-layout.md          # a proposed layout, and the open questions it waits on
+```
+
+The two probes under `packages/core/scripts/` are runnable, and each answers a question the docs
+would otherwise have to guess at:
+
+```bash
+bun run packages/core/scripts/probe-adapter-bootstrap.ts  # no credentials needed
+bun run packages/core/scripts/probe-claude-dir.ts         # needs an Anthropic credential
 ```
 
 ## Prior art

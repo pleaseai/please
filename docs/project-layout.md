@@ -1,9 +1,12 @@
 # Project layout
 
-> **Status: proposal, not a decision.** Nothing here is implemented, no signature is settled, and
-> `@pleaseai/core` still exports nothing. This note exists so the layout argument can be had against
-> something concrete. Treat every directory below as a candidate, and the open questions at the end
-> as genuinely open.
+> **Status: proposal, not a decision.** No layout below is implemented, no signature is settled, and
+> `@pleaseai/core`'s root export is still empty. This note exists so the layout argument can be had
+> against something concrete. Treat every directory below as a candidate.
+>
+> Open question 1 is the exception: it has been **answered by measurement**, and the sandbox layer
+> written to answer it is real code (`@pleaseai/core/sandbox`). Everything the answer changed is
+> marked below.
 
 The facts this argument rests on are recorded with sources and dates in
 [`prior-art.md`](./prior-art.md). Where the two disagree, `prior-art.md` is the record and this note
@@ -15,9 +18,15 @@ The obvious first decision looked like a choice: keep harness-native assets in t
 receive them in a neutral one and convert. That choice does not exist.
 
 `skills` accepts inline objects only — `{ name, description, content, files?: [{ path, content }] }`.
-No documented form takes a path or a directory. Anything authored on disk has to be read and built
-into those objects before the agent is constructed. The remaining question is not *whether* we
-build, but *what we treat as the source format*: the `.claude/skills` shape, or one of our own.
+No documented form takes a path or a directory. Anything handed to *that option* has to be read off
+disk and built into those objects before the agent is constructed, so the question there is not
+*whether* we build but *what we treat as the source format*: the `.claude/skills` shape, or one of
+our own.
+
+What has changed since this was written is that the option is no longer the only door. A
+`.claude/skills/` directory seeded into the session workdir is in scope for the runtime by the same
+mechanism that makes a seeded `CLAUDE.md` work — see open question 1. That turns a settled
+constraint back into a choice between two routes.
 
 Two more shapes constrain the layout directly:
 
@@ -39,19 +48,26 @@ contract as documented, that splits:
 | Native conversation state and compaction | comes along |
 | Session and resume (`detach()` / `stop()` → `sessionId` + `resumeFrom`) | comes along |
 | Durable workflow stepping (`@ai-sdk/workflow-harness`) | comes along |
-| Skills | must be rebuilt as inline objects |
+| Skills | rebuilt as inline objects, or seeded as a directory — see open question 1 |
 | Permission model | flattens to `allow-all` / `allow-edits` / `allow-reads` |
-| Plugins, slash commands, hooks, subagents | not in the contract at all |
+| Hooks | absent from the adapter's settings, but a seeded `.claude/settings.json` runs them — measured |
+| Plugins, slash commands, subagents | absent from the adapter's settings; same directory as hooks, so likely reachable, unmeasured |
 
 `createClaudeCode()` takes `auth`, `credentialForwarding`, `mcpServers`, `model`, `maxTurns`, `env`,
-`thinking`, `port`, `startupTimeoutMs` and `mintBridgeToken`, and is built on
-`@anthropic-ai/claude-agent-sdk` rather than the CLI. No `.claude` directory, settings file,
-`CLAUDE.md`, plugin, subagent, hook or slash-command option is documented.
+`thinking`, `effort`, `port`, `portEndpoint`, `startupTimeoutMs` and `mintBridgeToken`, and is built
+on `@anthropic-ai/claude-agent-sdk` rather than the CLI. No `.claude` directory, settings file,
+`CLAUDE.md`, plugin, subagent, hook or slash-command option is among them.
+
+That is a statement about the adapter's *settings*, and it is where this note previously stopped —
+wrongly, because the settings are not the only way into the runtime. The bridge starts the Agent SDK
+without passing `settingSources`, whose omitted default loads every source, so the session workdir's
+own `.claude/` is read at startup. A probe confirmed it: see below.
 
 This does not sink the premise — the parts that carry the most weight day to day, the tool set and
 the session story, do come along. The README's claim has been narrowed to that set and now names
-what does not follow. Whether any of the rest can be won back is what open questions 1 and 2
-decide.
+what does not follow. Some of the rest turned out to be winnable through the workspace rather than
+through configuration, which is what open question 1 settled; open question 2 is what the answer
+left conflicting.
 
 ## Three routes, three lifetimes
 
@@ -62,9 +78,15 @@ different lifetimes:
 | --- | --- | --- |
 | bootstrap material | `onBootstrap`, once during template creation | the snapshot, until `bootstrapHash` changes |
 | skills | built into `skills[]` before construction | the agent instance |
+| skills, alternatively | `onSession` into `.claude/skills/` | the session |
 | workspace files | `onSession` + `writeTextFile`, every session | the session |
 
 Host-executed tools are a fourth case and not a route at all: they never enter the sandbox.
+
+The `onSession` route carries more than plain workspace files. It is also how a `.claude/` directory
+reaches the runtime, which is the only route any of the harness's directory-sourced features have —
+and it is why skills appear twice in that table. The two rows are the same asset with different
+lifetimes, and choosing between them is open question 1's leftover.
 
 A layout that files these together hides which is which. Reading a directory should tell you when
 its contents appear and how long they last.
@@ -77,7 +99,7 @@ src/
   agent.ts           # adapter + sandbox + instructions
 
   bootstrap/         # → onBootstrap. baked into the snapshot, invalidated by bootstrapHash
-  skills/            # → built into skills[]. sourced from the .claude/skills shape
+  skills/            # → skills[] or a seeded .claude/skills/ — route undecided, see question 1
   workspace/         # → onSession + writeTextFile. rewritten every session
 
   host-tools/        # → tools. runs on the host, not in the sandbox
@@ -108,15 +130,26 @@ everything — which is the cost the README's "its ecosystem comes along" argume
 
 ## Open questions
 
-**1. Does a seeded `.claude` directory mean anything?** The adapter does not accept one as
-configuration, but `onSession` can write one into the workspace, and whether the Agent SDK reads it
-is not documented either way. If it does, the source format for `skills/` and the permission story
-are settled together. This is a package-level experiment rather than a design debate, and the other
-three questions are easier to answer once it is done.
+**1. Does a seeded `.claude` directory mean anything? — ANSWERED: yes (2026-08-27).**
+`packages/core/scripts/probe-claude-dir.ts` seeds a `CLAUDE.md` holding a unique codename and a
+`.claude/settings.json` declaring a `SessionStart` hook, then runs one turn with `activeTools: []`
+so no built-in tool can open the file. The model answered with the codename, made zero tool calls,
+and the hook's marker file was there afterwards.
 
-**2. Where do permissions come from?** `permissionMode`'s three values and a seeded settings file
-would describe the same thing twice. One of them has to win, and the answer decides whether the
-permission model can be claimed as the harness's at all or stays something we flatten.
+Two consequences. The `workspace/` route is not just for workspace files — it is the route for
+everything the runtime reads out of a directory, which is why hooks moved rows in the table above.
+And `skills/` no longer has to be built into inline objects to reach the runtime at all: a seeded
+`.claude/skills/` is in scope for the same reason `CLAUDE.md` is. Two caveats keep that from being
+settled. Only `CLAUDE.md` and a hook were measured; skills, subagents, slash commands and plugins
+were not. And the adapter writes its own inline `skills` to `$HOME/.claude/skills/<name>/SKILL.md`
+and queries with `skills: 'all'`, so a seeded project-level directory and the `skills` option would
+be two sources for one thing — which is open question 2's problem, arriving a second time.
+
+**2. Where do permissions come from?** This was a question about whether a seeded settings file
+would be read; the answer to question 1 makes it a real conflict rather than a hypothetical one.
+`permissionMode`'s three values and a seeded `.claude/settings.json` now demonstrably describe the
+same thing twice. One of them has to win, and the answer decides whether the permission model can be
+claimed as the harness's at all or stays something we flatten.
 
 **3. How does `host-tools/` behave across both targets?** A Worker has a per-invocation CPU limit; a
 Node deployment has a real filesystem and owns its own restart reconciliation. The README says this
