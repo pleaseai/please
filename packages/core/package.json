@@ -23,6 +23,11 @@
       "bun": "./src/sandbox/harness/index.ts",
       "types": "./dist/sandbox/harness/index.d.ts",
       "import": "./dist/sandbox/harness/index.js"
+    },
+    "./sandbox/docker": {
+      "bun": "./src/sandbox/docker/index.ts",
+      "types": "./dist/sandbox/docker/index.d.ts",
+      "import": "./dist/sandbox/docker/index.js"
     }
   },
   "main": "./dist/index.js",

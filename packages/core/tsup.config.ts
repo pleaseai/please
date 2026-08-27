@@ -5,6 +5,7 @@ export default defineConfig({
     'src/index.ts',
     'src/sandbox/contract/index.ts',
     'src/sandbox/harness/index.ts',
+    'src/sandbox/docker/index.ts',
   ],
   format: ['esm'],
   // tsup injects a deprecated `baseUrl` into the dts build; silence it under TS 6
