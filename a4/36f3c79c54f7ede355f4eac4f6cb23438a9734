@@ -1,0 +1,25 @@
+packages/core/test/sandbox/docker/harness-integration.test.ts
+  s_73d750f80c9b94::t_97c68c5c7a97f4 16,26-27,30,37
+packages/core/test/sandbox/docker/image.fixtures.ts
+  s_73d750f80c9b94::t_97c68c5c7a97f4 1-30
+packages/core/src/sandbox/docker/container.ts
+  s_73d750f80c9b94::t_0f4eaab0d69d0f 161,163-167,169-170,172-176,178-184,190-202,207-210,216-217,219-223
+packages/core/test/sandbox/docker/backend.test.ts
+  s_73d750f80c9b94::t_97c68c5c7a97f4 19,51-53,55,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "a436f3c79c54f7ede355f4eac4f6cb23438a9734",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
