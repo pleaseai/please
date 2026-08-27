@@ -49,8 +49,9 @@ contract as documented, that splits:
 `CLAUDE.md`, plugin, subagent, hook or slash-command option is documented.
 
 This does not sink the premise — the parts that carry the most weight day to day, the tool set and
-the session story, do come along. It does mean the README currently claims more than the contract
-delivers, and that claim should either narrow or be backed by the work that closes the gap.
+the session story, do come along. The README's claim has been narrowed to that set and now names
+what does not follow. Whether any of the rest can be won back is what open questions 1 and 2
+decide.
 
 ## Three routes, three lifetimes
 
@@ -114,8 +115,8 @@ are settled together. This is a package-level experiment rather than a design de
 three questions are easier to answer once it is done.
 
 **2. Where do permissions come from?** `permissionMode`'s three values and a seeded settings file
-would describe the same thing twice. One of them has to win, and which one decides whether the
-README's claim about the permission model can stand as written.
+would describe the same thing twice. One of them has to win, and the answer decides whether the
+permission model can be claimed as the harness's at all or stays something we flatten.
 
 **3. How does `host-tools/` behave across both targets?** A Worker has a per-invocation CPU limit; a
 Node deployment has a real filesystem and owns its own restart reconciliation. The README says this

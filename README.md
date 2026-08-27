@@ -21,10 +21,15 @@ worse copy carrying a permanent obligation to chase the original.
 
 Two things follow from reusing the harness instead:
 
-- **Its ecosystem comes along.** Claude Code's tools, permission model, sessions, skills and
-  plugins are the harness's, not ours to re-earn.
+- **Much of its ecosystem comes along.** The built-in tools, the native conversation state and
+  compaction, the session and resume story, and durable workflow stepping are the harness's, not
+  ours to re-earn.
 - **It decides the bill.** Driving Claude Code as a harness runs on a Claude Code subscription. A
   hand-rolled loop against the Messages API bills per token for the same work.
+
+What does *not* come along is on the record too: skills have to be rebuilt as inline objects, the
+permission model flattens to three modes, and plugins, hooks and subagents are absent from the
+contract — see [`docs/project-layout.md`](docs/project-layout.md).
 
 The harness boundary itself is not ours either — it is the AI SDK's
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent) and
