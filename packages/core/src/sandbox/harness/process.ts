@@ -29,6 +29,7 @@ import type { HarnessV1NetworkSandboxSession } from '@ai-sdk/harness'
 import type { ProcessLogEvent, SandboxProcessHandle, SandboxSession } from '../contract'
 import { SandboxNoExitRecordError } from '../contract'
 import { bestEffort, nowAborted } from './best-effort'
+import { splitProcessStreams } from './demux'
 
 /** The process half of the harness session. */
 export type HarnessProcessSurface = Pick<HarnessV1NetworkSandboxSession, 'run' | 'spawn'>
@@ -364,106 +365,4 @@ export function createProcessSurface(options: ProcessSurfaceOptions): HarnessPro
     /** The harness's own note: spawn, collect both streams, await the exit. */
     run: async processOptions => collectOutput(await spawn(processOptions)),
   }
-}
-
-export interface SplitProcessStreams {
-  stdout: ReadableStream<Uint8Array>
-  stderr: ReadableStream<Uint8Array>
-}
-
-type StreamSource = 'stdout' | 'stderr'
-
-interface DemuxState {
-  reader: ReadableStreamDefaultReader<ProcessLogEvent>
-  sinks: Record<StreamSource, ReadableStreamDefaultController<Uint8Array> | undefined>
-  /** Sources whose consumer cancelled. The reader is released once both have. */
-  abandoned: Set<StreamSource>
-  ended: boolean
-}
-
-/** Close both sinks, or error them, exactly once. */
-function finishDemux(state: DemuxState, cause?: unknown): void {
-  if (state.ended) {
-    return
-  }
-  state.ended = true
-  for (const sink of [state.sinks.stdout, state.sinks.stderr]) {
-    if (cause === undefined) {
-      sink?.close()
-    }
-    else {
-      sink?.error(cause)
-    }
-  }
-}
-
-/**
- * Read the shared source until `wanted` sees a chunk, routing everything passed on the way.
- *
- * Draining only the source being pulled would hang a consumer that reads `stderr` to
- * completion before touching `stdout`: the events it needs would sit unread behind events
- * for the other stream. `terminal` and `truncated` events are dropped — the harness's
- * streams are bytes and have no representation for either, and the exit reaches the caller
- * through `wait()`.
- */
-async function drainUntil(state: DemuxState, wanted: StreamSource): Promise<void> {
-  for (;;) {
-    if (state.ended) {
-      return
-    }
-    let event: ProcessLogEvent
-    try {
-      const next = await state.reader.read()
-      if (next.done) {
-        finishDemux(state)
-        return
-      }
-      event = next.value
-    }
-    catch (cause) {
-      finishDemux(state, cause)
-      throw cause
-    }
-    if (event.type !== 'stdout' && event.type !== 'stderr') {
-      continue
-    }
-    state.sinks[event.type]?.enqueue(event.data)
-    if (event.type === wanted) {
-      return
-    }
-  }
-}
-
-/**
- * One tagged event stream into the two byte streams the harness expects.
- *
- * Both outputs read from a single reader, which is what {@link drainUntil} is shaped around.
- * A cancelled consumer drops its sink rather than releasing the reader, so the drain keeps
- * discarding that source's events for the other stream's benefit; only the second cancel
- * releases the shared source.
- */
-export function splitProcessStreams(events: ReadableStream<ProcessLogEvent>): SplitProcessStreams {
-  const state: DemuxState = {
-    reader: events.getReader(),
-    sinks: { stdout: undefined, stderr: undefined },
-    abandoned: new Set(),
-    ended: false,
-  }
-
-  const streamFor = (source: StreamSource): ReadableStream<Uint8Array> =>
-    new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        state.sinks[source] = controller
-      },
-      pull: () => drainUntil(state, source),
-      cancel: async () => {
-        state.abandoned.add(source)
-        state.sinks[source] = undefined
-        if (state.abandoned.size === 2) {
-          await state.reader.cancel().catch(() => {})
-        }
-      },
-    })
-
-  return { stdout: streamFor('stdout'), stderr: streamFor('stderr') }
 }

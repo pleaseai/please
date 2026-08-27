@@ -8,7 +8,8 @@
  */
 import type { ProcessLogEvent } from '../../../src/sandbox/contract'
 import { describe, expect, it } from 'bun:test'
-import { createProcessSurface, splitProcessStreams } from '../../../src/sandbox/harness/process'
+import { splitProcessStreams } from '../../../src/sandbox/harness/demux'
+import { createProcessSurface } from '../../../src/sandbox/harness/process'
 import {
   exitedEvent,
   fakeSandboxProvider,

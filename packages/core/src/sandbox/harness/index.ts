@@ -13,11 +13,14 @@
 // behind it — Cloudflare, e2b, or one that does not exist yet — with no harness-shaped code
 // in any of them.
 
+export { splitProcessStreams } from './demux'
+export type { SplitProcessStreams } from './demux'
+
 export { createFileSurface, parentDirectory, sliceLines, toBase64 } from './files'
 export type { HarnessFileSurface } from './files'
 
-export { createProcessSurface, splitProcessStreams } from './process'
-export type { HarnessProcessSurface, ProcessSurfaceOptions, SplitProcessStreams } from './process'
+export { createProcessSurface } from './process'
+export type { HarnessProcessSurface, ProcessSurfaceOptions } from './process'
 
 export { createHarnessSandboxProvider } from './provider'
 export type { HarnessSandboxProviderOptions } from './provider'
