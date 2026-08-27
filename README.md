@@ -113,7 +113,8 @@ mise run ci         # lint + type-check + test + build
 packages/
   core/           # @pleaseai/core — placeholder; exports nothing yet
 docs/
-  prior-art.md    # what eve, flue and the AI SDK harnesses already do
+  prior-art.md       # what eve, flue and the AI SDK harnesses already do
+  project-layout.md  # a proposed layout, and the open questions it waits on
 ```
 
 ## Prior art

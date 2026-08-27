@@ -107,7 +107,8 @@ mise run ci         # lint + type-check + test + build
 packages/
   core/           # @pleaseai/core — 플레이스홀더, 아직 아무것도 export 하지 않는다
 docs/
-  prior-art.md    # eve, flue, AI SDK 하네스가 이미 하고 있는 것
+  prior-art.md       # eve, flue, AI SDK 하네스가 이미 하고 있는 것
+  project-layout.md  # 레이아웃 제안과, 그것이 기다리는 열린 질문들
 ```
 
 ## 선행 사례
