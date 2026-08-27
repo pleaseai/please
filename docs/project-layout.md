@@ -38,6 +38,7 @@ contract as documented, that splits:
 | Built-in tools (`read`, `write`, `edit`, `bash`, `grep`, `glob`, `webSearch`) | comes along |
 | Native conversation state and compaction | comes along |
 | Session and resume (`detach()` / `stop()` → `sessionId` + `resumeFrom`) | comes along |
+| Durable workflow stepping (`@ai-sdk/workflow-harness`) | comes along |
 | Skills | must be rebuilt as inline objects |
 | Permission model | flattens to `allow-all` / `allow-edits` / `allow-reads` |
 | Plugins, slash commands, hooks, subagents | not in the contract at all |
@@ -80,7 +81,7 @@ src/
 
   host-tools/        # → tools. runs on the host, not in the sandbox
   channels/          # slack.ts / github.ts / linear.ts (path is the name, eve-style)
-  workflows/         # no precedent — designed from scratch
+  workflows/         # 'use step' wrappers over @ai-sdk/workflow-harness runners
 
   cloudflare.ts      # optional — target entrypoint
   vercel.ts          # optional
@@ -90,6 +91,11 @@ evals/               # beside src, not inside (eve-style)
 `host-tools/` rather than `tools/`, because the name is the only defence. Everything else in that
 list describes the inside of the sandbox and this one does not, and the difference shows up as a
 per-invocation CPU limit on a Worker.
+
+One thing the list above does not place: external MCP servers. They are the contract's third tool
+surface, configured on the adapter (`mcpServers`) rather than on the agent, and eve gives them a
+directory of their own (`connections/`). Whether they are authored as files or stay adapter config
+is undecided here.
 
 Borrowed deliberately: eve's path-as-identity, which removes a whole class of drift between a
 declared name and a file name; eve's `evals/` as a sibling rather than a child; flue's
@@ -116,7 +122,11 @@ Node deployment has a real filesystem and owns its own restart reconciliation. T
 project absorbs that asymmetry rather than leaking it, and this is the first place that has to be
 true.
 
-**4. Is a workflow step boundary a detach point?** `detach()` returns resume state that a session
-recreated with the same `sessionId` and `resumeFrom` picks back up. That is the natural mapping and
-worth stating as a hypothesis so it can be argued with. flue pushed workflows outside the framework
-entirely, so there is no precedent to copy here.
+**4. What is left for `workflows/` once `@ai-sdk/workflow-harness` is used?** The step boundary is
+not ours to invent: `runHarnessAgentStep()` or `runHarnessAgentTimeSlice()` inside a `'use step'`
+function, `continueFrom` continuing an unfinished turn between steps, and a stable `sessionId` plus
+an application-persisted `resumeFrom` carrying a session between runs. What that package does *not*
+decide is where the resume state lives per channel-originated request, or whether a Cloudflare
+Workflow and a Vercel Workflow can run the same authored step — which is what `workflows/` would
+have to be for. flue pushed workflows outside its framework entirely, so the precedent to read here
+is the contract's own, not a neighbour's.

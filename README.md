@@ -119,9 +119,12 @@ docs/
 
 ## Prior art
 
-[`docs/prior-art.md`](docs/prior-art.md) records what eve and flue actually do — read from their
-own documentation, with dates — so that design arguments here start from what exists rather than
-from recollection.
+[`docs/prior-art.md`](docs/prior-art.md) records what eve, flue and the AI SDK harness contract
+actually do — read from their own documentation, with dates — so that design arguments here start
+from what exists rather than from recollection.
+
+[`docs/project-layout.md`](docs/project-layout.md) is the first argument built on that record: a
+proposed layout, what the contract already decides for us, and the questions still open.
 
 ## Contributing
 

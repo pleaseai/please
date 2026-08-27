@@ -113,8 +113,12 @@ docs/
 
 ## 선행 사례
 
-[`docs/prior-art.md`](docs/prior-art.md)는 eve와 flue가 실제로 무엇을 하는지 — 각자의 공식 문서에서,
-날짜와 함께 — 기록한다. 여기서의 설계 논의가 기억이 아니라 존재하는 것에서 출발하도록.
+[`docs/prior-art.md`](docs/prior-art.md)는 eve, flue, 그리고 AI SDK 하네스 계약이 실제로 무엇을 하는지
+— 각자의 공식 문서에서, 날짜와 함께 — 기록한다. 여기서의 설계 논의가 기억이 아니라 존재하는 것에서
+출발하도록.
+
+[`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 첫 번째 논증이다. 제안 레이아웃,
+계약이 이미 우리 대신 정해 버린 것들, 그리고 아직 열려 있는 질문들.
 
 ## 기여
 
