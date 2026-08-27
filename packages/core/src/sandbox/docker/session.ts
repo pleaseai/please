@@ -19,6 +19,7 @@ import { createDockerFiles } from './files'
 import { JOURNAL_ROOT, journalledCommand, journalPaths } from './journal'
 import { createProcessHandle } from './process'
 import { readJournalState, toProcessStatus } from './process-state'
+import { quoteArg } from './shell-quote'
 
 /** How long `exec` waits for the wrapper to record that it started. */
 const START_TIMEOUT_MS = 5_000
@@ -82,15 +83,42 @@ async function exec(
     throw new Error(`starting a process failed (exit ${started.exitCode}): ${started.stderr.trim()}`)
   }
 
-  await waitForStart(container, paths, processId)
+  try {
+    await waitForStart(container, paths, processId)
+  }
+  catch (cause) {
+    // The detached wrapper may be running even though its journal never became readable in
+    // time. Rejecting without this would return no handle for a live process — nothing
+    // could ever kill it, and nothing could ever read it.
+    await abandonStartedProcess(container, paths)
+    throw cause
+  }
   return createProcessHandle({ container, processId, paths, command })
+}
+
+/** Best-effort teardown of a process whose start could not be confirmed. */
+async function abandonStartedProcess(
+  container: string,
+  paths: ReturnType<typeof journalPaths>,
+): Promise<void> {
+  const script = [
+    `pid=$(cat ${quoteArg(paths.pid)} 2>/dev/null)`,
+    'if [ -n "$pid" ] ; then kill -9 "-$pid" 2>/dev/null || kill -9 "$pid" 2>/dev/null ; fi',
+    `rm -rf -- ${quoteArg(paths.dir)}`,
+  ].join('\n')
+  await execScript(container, script).catch(() => undefined)
 }
 
 async function getProcess(
   handle: ContainerHandle,
   processId: string,
 ): Promise<SandboxProcessHandle | null> {
-  const container = await handle.ready()
+  // Discovery must not create: asking whether a sandbox ever ran a process is a question,
+  // and a question that stands up a container has changed the thing it was asking about.
+  const container = await handle.peek()
+  if (container === undefined) {
+    return null
+  }
   const paths = journalPaths(processId)
   const probe = await execInContainer(container, ['test', '-d', paths.dir])
   if (probe.exitCode !== 0) {
@@ -107,7 +135,10 @@ async function getProcess(
 }
 
 async function listProcesses(handle: ContainerHandle): Promise<ProcessStatus[]> {
-  const container = await handle.ready()
+  const container = await handle.peek()
+  if (container === undefined) {
+    return []
+  }
   const listing = await execScript(container, `ls -1 ${JOURNAL_ROOT} 2>/dev/null || true`)
   const ids = listing.stdout.split('\n').map(id => id.trim()).filter(id => id.length > 0)
 

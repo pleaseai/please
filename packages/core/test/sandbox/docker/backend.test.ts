@@ -175,13 +175,34 @@ suite('docker sandbox backend', () => {
 
   it('kills the process group, so a child does not outlive its parent', async () => {
     const session = sandboxes.session(sandboxId)
+    const pidFile = `${WORK_DIR}/grandchild.pid`
 
-    const proc = await session.exec(['sh', '-c', 'sleep 60 & wait'])
+    // The grandchild publishes its own pid, because the wrapper's exit code only ever
+    // describes the wrapper's direct child — a group kill that missed the `sleep` would
+    // leave it running behind an exit code that looked perfectly correct.
+    const proc = await session.exec(['sh', '-c', `sleep 60 & echo $! > ${pidFile} ; wait`])
+    while (!(await session.exists(pidFile)).exists) {
+      await Bun.sleep(50)
+    }
+    const grandchild = (await session.readFile(pidFile)).content.trim()
+
     await proc.kill()
     const exit = await proc.waitForExit()
 
+    // `kill -0` cannot answer this: the grandchild is reparented to the container's PID 1
+    // — `sleep infinity`, which reaps nothing — so a terminated one lingers as a zombie that
+    // still accepts signals. Its scheduler state is what actually distinguishes the two.
+    const probe = await session.exec(['sh', '-c', `sed 's/.*) //' /proc/${grandchild}/stat `
+      + '2>/dev/null | cut -d\' \' -f1 || echo gone'])
+    await probe.waitForExit()
+    const probeLogs = await drain(await probe.logs({ replay: true }))
+
+    // `Z` is a terminated grandchild awaiting a reaper that never comes; `gone` is one
+    // already reaped. A `sleep 60` that outlived the group kill would report `S`.
+    expect(['Z', 'gone']).toContain(probeLogs.stdout.trim())
     // The shell reports a signalled child as 128 + signal; SIGTERM is 15.
-    expect(exit.code).toBeGreaterThan(128)
+    expect(exit.code).toBe(143)
+    expect(exit.signal).toBe(15)
   })
 
   it('rejects a wait that expires before the process does', async () => {
@@ -208,6 +229,13 @@ suite('docker sandbox backend', () => {
     const session = sandboxes.session(sandboxId)
 
     expect(await session.getProcess(crypto.randomUUID())).toBeNull()
+  })
+
+  it('answers cold rather than creating a container when a sandbox was never started', async () => {
+    const session = sandboxes.session(`cold-${crypto.randomUUID().slice(0, 8)}`)
+
+    expect(await session.getProcess(crypto.randomUUID())).toBeNull()
+    expect(await session.listProcesses()).toEqual([])
   })
 
   it('passes cwd and env through to the process', async () => {
@@ -242,11 +270,24 @@ suite('docker sandbox backend', () => {
     const proc = await session.exec(['sleep', '30'], { timeout: 1000 })
     const exit = await proc.waitForExit()
 
-    // 124 is what GNU `timeout` reports for a command it had to terminate, and `timedOut`
-    // is the contract's way of saying the process died of its own timeout rather than
-    // because a caller stopped waiting.
-    expect(exit.code).toBe(124)
+    // The watchdog terminates the group, so the exit is an ordinary signalled one — and
+    // `timedOut` comes from the marker it writes before firing, not from the exit code.
+    // `timedOut` is the contract's way of saying the process died of its own timeout rather
+    // than because a caller stopped waiting.
     expect(exit.timedOut).toBe(true)
+    expect(exit.code).toBe(143)
+    expect(exit.signal).toBe(15)
+  })
+
+  it('honours a sub-second timeout rather than rounding it up to a whole second', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    const startedAt = Date.now()
+    const proc = await session.exec(['sleep', '30'], { timeout: 200 })
+    const exit = await proc.waitForExit()
+
+    expect(exit.timedOut).toBe(true)
+    expect(Date.now() - startedAt).toBeLessThan(1000)
   })
 
   it('does not mark an ordinary exit as timed out', async () => {
@@ -256,6 +297,28 @@ suite('docker sandbox backend', () => {
     const exit = await proc.waitForExit()
 
     expect(exit.timedOut).toBe(false)
+  })
+
+  it('does not mark a command that returns 124 by itself as timed out', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    // 124 is GNU `timeout`'s code for a command it terminated, and equally a code a command
+    // may return on its own. Inferring the timeout from it confuses the two.
+    const proc = await session.exec(['sh', '-c', 'exit 124'], { timeout: 30_000 })
+    const exit = await proc.waitForExit()
+
+    expect(exit.code).toBe(124)
+    expect(exit.timedOut).toBe(false)
+  })
+
+  it('reports no signal for a command that returns a code above 128 by itself', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    const proc = await session.exec(['sh', '-c', 'exit 200'])
+    const exit = await proc.waitForExit()
+
+    expect(exit.code).toBe(200)
+    expect(exit.signal).toBeUndefined()
   })
 
   it('resolves a host address for an exposed port', async () => {

@@ -33,6 +33,8 @@ function parentDirectory(path: string): string {
   return index <= 0 ? '/' : path.slice(0, index)
 }
 
+// `--` ends option parsing, so a path beginning with `-` is read as a path rather than as a
+// flag — or, for `cat`, as the stdin the bare `-` means.
 async function readStream(container: string, path: string): Promise<SandboxFileStream> {
   // Existence is checked first: a streamed read cannot report a missing file through its
   // body, and a caller that got an empty stream would read it as an empty file.
@@ -41,7 +43,7 @@ async function readStream(container: string, path: string): Promise<SandboxFileS
     throw new SandboxFileNotFoundError(path)
   }
 
-  const proc = spawnInContainer(container, ['cat', path])
+  const proc = spawnInContainer(container, ['cat', '--', path])
   return { content: proc.stdout as ReadableStream<Uint8Array> }
 }
 
@@ -50,7 +52,7 @@ async function readDecoded(
   path: string,
   encoding: SandboxFileEncoding | undefined,
 ): Promise<SandboxFileContent> {
-  const result = await execInContainerBytes(container, ['cat', path])
+  const result = await execInContainerBytes(container, ['cat', '--', path])
   if (result.exitCode !== 0) {
     throw new SandboxFileNotFoundError(path)
   }
@@ -83,7 +85,7 @@ async function write(
 
   // One `sh -c` creates the parent and writes the body, so a write to a path whose directory
   // does not exist yet succeeds instead of needing the caller to sequence two calls.
-  const script = `mkdir -p ${quoteArg(parentDirectory(path))} && cat > ${quoteArg(path)}`
+  const script = `mkdir -p -- ${quoteArg(parentDirectory(path))} && cat > ${quoteArg(path)}`
   const result = await execInContainer(container, ['sh', '-c', script], { stdin: bytes })
   if (result.exitCode !== 0) {
     throw new Error(`writing '${path}' failed (exit ${result.exitCode}): ${result.stderr.trim()}`)
@@ -102,7 +104,7 @@ export function createDockerFiles(container: string): SandboxFiles {
     readFile,
     writeFile: (path, content, options) => write(container, path, content, options),
     mkdir: async (path, options) => {
-      const argv = options?.recursive === true ? ['mkdir', '-p', path] : ['mkdir', path]
+      const argv = options?.recursive === true ? ['mkdir', '-p', '--', path] : ['mkdir', '--', path]
       const result = await execInContainer(container, argv)
       if (result.exitCode !== 0) {
         throw new Error(

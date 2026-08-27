@@ -137,6 +137,10 @@ try {
   log('answered without using any tool:', toolCalls.length === 0 ? 'YES' : `NO (${toolCalls.length})`)
   log('.claude/settings.json hook ran:', hookFired ? 'YES' : 'NO')
 
+  // The exit code carries the verdict, so a run that measured nothing is not mistaken for one
+  // that answered. A `SKIP` above still exits 0 on purpose — an absent daemon or credential is
+  // not a failed measurement — but both ways of failing to measure are exit 1 (cubic review,
+  // PR #7).
   if (knewCodename && toolCalls.length === 0) {
     log('')
     log('CONCLUSION', 'a seeded .claude workdir IS read — open question 1 answers yes')
@@ -144,6 +148,15 @@ try {
   else if (!knewCodename) {
     log('')
     log('CONCLUSION', 'the seeded CLAUDE.md did NOT reach the model — open question 1 answers no')
+    process.exitCode = 1
+  }
+  else {
+    // The codename came back, but so did a tool call — and the whole design of the probe is
+    // that `activeTools: []` leaves no way to read the file. The answer proves nothing about
+    // the system prompt, which makes this a failed measurement rather than a negative one.
+    log('')
+    log('CONCLUSION', `INCONCLUSIVE: the codename came back after ${toolCalls.length} tool call(s), which could have supplied it`)
+    process.exitCode = 1
   }
 }
 finally {

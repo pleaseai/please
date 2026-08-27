@@ -12,10 +12,37 @@
  */
 import { DockerCommandError, runDocker, runDockerOrThrow } from './cli'
 
-/** Container name for a sandbox id, constrained to what the daemon accepts. */
+/** Characters `docker run --name` accepts after the first one. */
+function sanitize(value: string): string {
+  return value.replaceAll(/[^\w.-]/g, '-')
+}
+
+/**
+ * A short, stable digest of a string, as lowercase hex.
+ *
+ * FNV-1a: the digest only has to separate two ids the sanitizer maps together, so a
+ * non-cryptographic hash that needs no async subtle-crypto call is the right size of tool.
+ */
+function shortDigest(value: string): string {
+  let hash = 0x811C9DC5
+  for (let index = 0; index < value.length; index += 1) {
+    hash = Math.imul(hash ^ value.charCodeAt(index), 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
+/**
+ * Container name for a sandbox id, constrained to what the daemon accepts.
+ *
+ * The sanitiser is lossy — `a/b` and `a:b` both flatten to `a-b` — so a digest of the *raw*
+ * id is appended. Without it two distinct sandboxes would share one container, and with it
+ * they cannot: the sanitized part stays readable, and the digest carries the difference.
+ * The prefix gets the same treatment plus a leading-character guard, because Docker requires
+ * a name to start with an alphanumeric.
+ */
 export function containerName(sandboxId: string, prefix = 'please'): string {
-  const safe = sandboxId.replaceAll(/[^\w.-]/g, '-')
-  return `${prefix}-${safe}`
+  const safePrefix = sanitize(prefix).replace(/^[^a-z0-9]+/i, '') || 'please'
+  return `${safePrefix}-${sanitize(sandboxId)}-${shortDigest(sandboxId)}`
 }
 
 export interface ContainerOptions {
@@ -54,7 +81,9 @@ function createArgs(name: string, options: ContainerOptions): string[] {
   }
   // `sleep infinity` rather than the image's own entrypoint: the container is a place to run
   // `docker exec` against, and an entrypoint that exits would take the sandbox with it.
-  args.push(options.image, 'sleep', 'infinity')
+  // `--entrypoint` rather than a trailing command, because an image that declares one would
+  // otherwise receive `sleep infinity` as arguments to it instead of in place of it.
+  args.push('--entrypoint', 'sleep', options.image, 'infinity')
   return args
 }
 
@@ -70,10 +99,10 @@ async function runSetup(name: string, commands: readonly string[]): Promise<void
   }
 }
 
-/** Whether a container with this name exists, in any state. */
-async function containerExists(name: string): Promise<boolean> {
+/** The container's state as the daemon reports it, or undefined when there is none. */
+async function containerStatus(name: string): Promise<string | undefined> {
   const result = await runDocker(['container', 'inspect', '--format', '{{.State.Status}}', name])
-  return result.exitCode === 0
+  return result.exitCode === 0 ? result.stdout.trim() : undefined
 }
 
 /**
@@ -85,7 +114,7 @@ async function containerExists(name: string): Promise<boolean> {
  * it — survives.
  */
 async function acquire(name: string, options: ContainerOptions): Promise<string> {
-  if (await containerExists(name)) {
+  if (await containerStatus(name) !== undefined) {
     await runDockerOrThrow(['start', name])
     return name
   }
@@ -100,7 +129,16 @@ async function acquire(name: string, options: ContainerOptions): Promise<string>
     }
     throw cause
   }
-  await runSetup(name, options.setupCommands ?? [])
+  try {
+    await runSetup(name, options.setupCommands ?? [])
+  }
+  catch (cause) {
+    // A container whose setup failed is a half-built sandbox that no later `ready()` would
+    // ever finish, because adoption does not re-run setup. Removing it makes the next
+    // attempt a fresh create, which is the only thing that can actually succeed.
+    await runDocker(['rm', '--force', '--volumes', name])
+    throw cause
+  }
   return name
 }
 
@@ -112,6 +150,14 @@ export interface ContainerHandle {
   readonly hostAddress: (port: number) => Promise<string>
   /** Remove the container and everything on it. Idempotent. */
   readonly remove: () => Promise<void>
+  /**
+   * The container name if it is already running, without creating or starting anything.
+   *
+   * Discovery calls — `getProcess`, `listProcesses` — use this so that probing a sandbox
+   * that was never started answers "nothing here" instead of standing one up as a side
+   * effect of the question.
+   */
+  readonly peek: () => Promise<string | undefined>
 }
 
 export function createContainerHandle(
@@ -145,7 +191,13 @@ export function createContainerHandle(
     },
     remove: async () => {
       acquisition = undefined
-      await runDocker(['rm', '--force', '--volumes', name])
+      const result = await runDocker(['rm', '--force', '--volumes', name])
+      // A container that was never there is the state `remove` promises, so that one result
+      // is success. Anything else leaked a container, and a silent resolve would hide it.
+      if (result.exitCode !== 0 && !/no such container/i.test(result.stderr)) {
+        throw new DockerCommandError(['rm', '--force', '--volumes', name], result.exitCode, result.stderr)
+      }
     },
+    peek: async () => (await containerStatus(name) === 'running' ? name : undefined),
   }
 }

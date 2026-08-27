@@ -1,3 +1,11 @@
+/*
+ * Vendored from `chatbot-pf/pleaseworks` (`packages/harness-sandbox/src/files.test.ts`), relicensed from
+ * FSL-1.1-MIT to Apache-2.0 by the copyright holder, Passion Factory, Inc.
+ *
+ * Comments below naming paths such as `apps/cf-orchestrator/…`, `run/run-workflow.ts` or
+ * sibling packages refer to that originating codebase, not to this repository. They are kept
+ * because they record why each obligation exists.
+ */
 import { describe, expect, it } from 'bun:test'
 import { createFileSurface } from '../../../src/sandbox/harness/files'
 import { fakeSandboxProvider } from './sandbox.fixtures'

@@ -77,6 +77,7 @@ export function spawnInContainer(
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
+    signal: options.abortSignal,
   })
 }
 

@@ -164,7 +164,20 @@ async function streamOf(
   abortSignal: AbortSignal | undefined,
 ): Promise<ReadableStream<Uint8Array> | null> {
   abortSignal?.throwIfAborted()
-  const exists = await present(sandbox, path)
+  let exists: boolean
+  try {
+    exists = await present(sandbox, path)
+  }
+  catch (cause) {
+    // The probe is the one awaited sandbox call on this path whose *failure* had no abort
+    // guard: an abort landing while `exists()` is in flight leaves through here, before the
+    // check below ever runs, and the caller was handed whatever the backend raises for a
+    // cancelled probe instead of its own reason — the distinction every other abort site in
+    // this package restores, and the one a caller matches on to recognise its own
+    // cancellation. Unaborted, the cause passes through untouched, since a real probe failure
+    // reported as anything else would be the worse bug (cubic review, PR #7).
+    throw nowAborted(abortSignal) ? abortSignal.reason : cause
+  }
   // The probe's answer is held and the check hoisted above the branch, rather than repeated
   // inside each arm. The rule is then one a reader can apply by looking at the `await`s
   // alone — *every* awaited call is followed by a check before anything is decided from its

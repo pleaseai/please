@@ -54,9 +54,30 @@ export function createDockerSandbox(options: DockerSandboxOptions): SandboxProvi
     return { url: `${protocol}://${address}` }
   }
 
+  // `destroy()` removes the container, so the cached handle is spent — keeping it would make
+  // a long-lived provider grow by one dead entry per sandbox it ever tore down. The identity
+  // check is what stops a teardown racing a re-`session()` from evicting the replacement.
+  const session = (sandboxId: string) => {
+    const handle = handleFor(sandboxId)
+    const created = createDockerSession({ container: handle })
+    return {
+      ...created,
+      destroy: async () => {
+        try {
+          await created.destroy()
+        }
+        finally {
+          if (handles.get(sandboxId) === handle) {
+            handles.delete(sandboxId)
+          }
+        }
+      },
+    }
+  }
+
   return {
     backend: 'docker',
-    session: sandboxId => createDockerSession({ container: handleFor(sandboxId) }),
+    session,
     portEndpoint,
   } satisfies SandboxProvider
 }

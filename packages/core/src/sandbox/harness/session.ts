@@ -67,12 +67,20 @@ export function createHarnessSandboxSession(
   }
 
   let teardown: Promise<void> | undefined
-  const destroy = (): Promise<void> => (teardown ??= sandbox.destroy().catch((cause: unknown) => {
-    // Cleared on rejection only, so a later `stop()`/`destroy()` actually retries while
-    // callers racing the one in flight still share it.
-    teardown = undefined
-    throw cause
-  }))
+  // `Promise.resolve().then(…)` rather than `sandbox.destroy().catch(…)`, for the reason
+  // {@link bestEffort} states one file over: the call is evaluated before any promise exists to
+  // attach the handler to, so a backend whose `destroy()` throws *synchronously* throws out of
+  // `stop()`/`destroy()` instead of rejecting — and it throws past the latch, leaving `teardown`
+  // unset in a way no caller can observe as a failed teardown. Invoking from inside the `then`
+  // puts a synchronous throw and a rejection on the same path (cubic review, PR #7).
+  const destroy = (): Promise<void> => (teardown ??= Promise.resolve()
+    .then(() => sandbox.destroy())
+    .catch((cause: unknown) => {
+      // Cleared on rejection only, so a later `stop()`/`destroy()` actually retries while
+      // callers racing the one in flight still share it.
+      teardown = undefined
+      throw cause
+    }))
 
   const getPortEndpoint: HarnessV1NetworkSandboxSession['getPortEndpoint'] = ({ port, protocol }) =>
     sandboxes.portEndpoint(sandboxId, port, { protocol })

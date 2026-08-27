@@ -7,6 +7,7 @@
  */
 import type {
   ProcessExit,
+  ProcessLogCursor,
   ProcessLogEvent,
   ProcessLogsOptions,
   ProcessStatus,
@@ -25,6 +26,12 @@ import { quoteArg } from './shell-quote'
 /** How often a wait re-reads the journal. */
 const POLL_INTERVAL_MS = 120
 
+/** How long `kill` waits for the wrapper to reap the child before it gives up watching. */
+const REAP_TIMEOUT_MS = 5_000
+
+/** How long a followed read waits for the wrapper's pid to appear in the journal. */
+const PID_TIMEOUT_MS = 1_000
+
 /** Byte sizes of both log files, for a read that starts at the live tail. */
 async function readLiveOffsets(
   container: string,
@@ -42,11 +49,21 @@ async function readLiveOffsets(
   }
 }
 
-function terminalEvent(state: JournalState, processId: string): ProcessLogEvent | undefined {
+/**
+ * The event that closes a log stream.
+ *
+ * It carries the offsets the stream actually reached, not an empty cursor: a caller resuming
+ * from the last event it saw would otherwise be told position zero and replay the whole log.
+ */
+function terminalEvent(
+  state: JournalState,
+  processId: string,
+  cursor: ProcessLogCursor,
+): ProcessLogEvent | undefined {
   const timestamp = new Date().toISOString()
   const exit = toProcessExit(state)
   if (exit !== undefined) {
-    return { type: 'terminal', state: 'exited', cursor: '', timestamp, exit }
+    return { type: 'terminal', state: 'exited', cursor, timestamp, exit }
   }
   if (state.alive) {
     return undefined
@@ -54,7 +71,7 @@ function terminalEvent(state: JournalState, processId: string): ProcessLogEvent 
   return {
     type: 'terminal',
     state: 'error',
-    cursor: '',
+    cursor,
     timestamp,
     error: {
       code: 'no_exit_record',
@@ -116,10 +133,19 @@ async function waitForExit(
   }
 }
 
-/** Signal the process's whole session, so anything it spawned goes with it. */
+/**
+ * Signal the process's whole session, so anything it spawned goes with it.
+ *
+ * Nothing is signalled once the journal says the process is over: the pid it records is
+ * historical from that moment on, and the container is free to hand it to something else.
+ * Signalling it then would kill an unrelated process — or an unrelated *group*.
+ *
+ * The call resolves only once the wrapper has reaped the child, so a caller that awaits a
+ * kill before tearing down or retrying is not racing a process that is still running.
+ */
 async function kill(options: ProcessHandleOptions, signal = 15): Promise<void> {
   const state = await readJournalState(options.container, options.paths)
-  if (state.pid === undefined) {
+  if (state.pid === undefined || state.exit !== undefined || !state.alive) {
     return
   }
   // Negative pid targets the process group. `setsid` in the wrapper is what makes that group
@@ -128,6 +154,39 @@ async function kill(options: ProcessHandleOptions, signal = 15): Promise<void> {
     options.container,
     `kill -${signal} -${state.pid} 2>/dev/null || kill -${signal} ${state.pid} 2>/dev/null || true`,
   )
+  await awaitTermination(options)
+}
+
+/** Poll until the journal reports the process over, or the budget for watching runs out. */
+async function awaitTermination(options: ProcessHandleOptions): Promise<void> {
+  const deadline = Date.now() + REAP_TIMEOUT_MS
+  for (;;) {
+    const state = await readJournalState(options.container, options.paths)
+    if (state.exit !== undefined || !state.alive) {
+      return
+    }
+    if (Date.now() >= deadline) {
+      return
+    }
+    await Bun.sleep(POLL_INTERVAL_MS)
+  }
+}
+
+/**
+ * The wrapper pid, waited for when a followed read needs one to terminate on.
+ *
+ * A handle resolved from an id alone can be asked for logs while the wrapper is still
+ * writing its pid file. Returning immediately would start an unbounded `tail -f`.
+ */
+async function resolveWrapperPid(options: ProcessHandleOptions): Promise<JournalState> {
+  const deadline = Date.now() + PID_TIMEOUT_MS
+  for (;;) {
+    const state = await readJournalState(options.container, options.paths)
+    if (state.pid !== undefined || state.exit !== undefined || Date.now() >= deadline) {
+      return state
+    }
+    await Bun.sleep(POLL_INTERVAL_MS)
+  }
 }
 
 async function logs(
@@ -135,7 +194,9 @@ async function logs(
   logsOptions: ProcessLogsOptions = {},
 ): Promise<ReadableStream<ProcessLogEvent>> {
   const [state, liveOffsets] = await Promise.all([
-    readJournalState(options.container, options.paths),
+    logsOptions.follow === true
+      ? resolveWrapperPid(options)
+      : readJournalState(options.container, options.paths),
     readLiveOffsets(options.container, options.paths),
   ])
 
@@ -145,9 +206,10 @@ async function logs(
     paths: options.paths,
     ...(state.pid === undefined ? {} : { wrapperPid: state.pid }),
     liveOffsets,
-    terminal: async () => terminalEvent(
+    terminal: async cursor => terminalEvent(
       await readJournalState(options.container, options.paths),
       options.processId,
+      cursor,
     ),
   })
 }

@@ -1,3 +1,11 @@
+/*
+ * Vendored from `chatbot-pf/pleaseworks` (`packages/harness-sandbox/src/process.test.ts`), relicensed from
+ * FSL-1.1-MIT to Apache-2.0 by the copyright holder, Passion Factory, Inc.
+ *
+ * Comments below naming paths such as `apps/cf-orchestrator/…`, `run/run-workflow.ts` or
+ * sibling packages refer to that originating codebase, not to this repository. They are kept
+ * because they record why each obligation exists.
+ */
 import type { ProcessLogEvent } from '../../../src/sandbox/contract'
 import { describe, expect, it } from 'bun:test'
 import { createProcessSurface, splitProcessStreams } from '../../../src/sandbox/harness/process'

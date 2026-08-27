@@ -320,7 +320,22 @@ export function createProcessSurface(options: ProcessSurfaceOptions): HarnessPro
       // asks for.
       stdout,
       stderr,
-      wait: () => waitForProcessExit(handle, abortSignal),
+      wait: async () => {
+        const exit = await waitForProcessExit(handle, abortSignal)
+        // Taken off on the one outcome that is genuinely terminal, for the reason
+        // {@link startProcess}'s own `detach()` gives: one signal serves a whole turn, so a
+        // listener left on it per spawn retains this handle and its closure for as long as the
+        // caller holds the signal, and a later abort then issues a `kill()` against a process
+        // that exited turns ago.
+        //
+        // Only on the successful exit, deliberately. A *rejected* wait is not an exit — a
+        // transport failure mid-wait leaves the command running, and that is exactly the case
+        // the listener exists for, so detaching there would drop the guard while there is still
+        // something to kill. An aborted wait needs no detach either: `abort` fired, and
+        // `{ once: true }` collected the listener as it did (cubic review, PR #7).
+        detach()
+        return exit
+      },
       kill: () => handle.kill(),
     }
   }

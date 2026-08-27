@@ -56,15 +56,19 @@ export async function runDocker(
   options: DockerCallOptions = {},
 ): Promise<DockerResult> {
   const proc = spawnDocker(args, options)
-  await writeStdin(proc, options.stdin)
+  // Both readers are started before stdin is written: a child that fills its stdout pipe
+  // blocks until someone drains it, and a parent still writing stdin never would.
+  const stdout = new Response(proc.stdout).text()
+  const stderr = new Response(proc.stderr).text()
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+  const [, out, err, exitCode] = await Promise.all([
+    writeStdin(proc, options.stdin),
+    stdout,
+    stderr,
     proc.exited,
   ])
 
-  return { exitCode, stdout, stderr }
+  return { exitCode, stdout: out, stderr: err }
 }
 
 /** As {@link runDocker}, but keeps stdout as bytes — for files that are not valid UTF-8. */
@@ -73,27 +77,73 @@ export async function runDockerBytes(
   options: DockerCallOptions = {},
 ): Promise<{ exitCode: number, stdout: Uint8Array, stderr: string }> {
   const proc = spawnDocker(args, options)
-  await writeStdin(proc, options.stdin)
+  const stdout = new Response(proc.stdout).bytes()
+  const stderr = new Response(proc.stderr).text()
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    new Response(proc.stdout).bytes(),
-    new Response(proc.stderr).text(),
+  const [, out, err, exitCode] = await Promise.all([
+    writeStdin(proc, options.stdin),
+    stdout,
+    stderr,
     proc.exited,
   ])
 
-  return { exitCode, stdout, stderr }
+  return { exitCode, stdout: out, stderr: err }
+}
+
+/** Flags whose argument carries a value the caller may consider secret. */
+const SECRET_VALUE_FLAGS = new Set(['--env', '-e', '--build-arg', '--env-file', '--secret'])
+
+/** What replaces a redacted value, so the shape of the argv is still readable. */
+const REDACTED = '<redacted>'
+
+/**
+ * Blank out the value half of every secret-bearing argument.
+ *
+ * Container creation passes the sandbox's environment as `--env KEY=value`, so an argv
+ * reproduced verbatim in an error message puts API keys into logs and stack traces. The key
+ * half is kept — it is what makes a failure diagnosable — and only the value is dropped.
+ */
+export function redactArgs(args: readonly string[]): string[] {
+  const redactValue = (arg: string) => {
+    const separator = arg.indexOf('=')
+    return separator < 0 ? REDACTED : `${arg.slice(0, separator + 1)}${REDACTED}`
+  }
+
+  const out: string[] = []
+  let pendingSecret = false
+  for (const arg of args) {
+    const inlineFlag = arg.slice(0, Math.max(0, arg.indexOf('=')))
+    if (pendingSecret) {
+      out.push(redactValue(arg))
+      pendingSecret = false
+    }
+    else if (SECRET_VALUE_FLAGS.has(arg)) {
+      out.push(arg)
+      pendingSecret = true
+    }
+    else if (SECRET_VALUE_FLAGS.has(inlineFlag)) {
+      // The `--env=KEY=value` spelling: keep the flag and the key, drop the value.
+      out.push(`${inlineFlag}=${redactValue(arg.slice(inlineFlag.length + 1))}`)
+    }
+    else {
+      out.push(arg)
+    }
+  }
+  return out
 }
 
 /** The error every non-zero docker invocation surfaces, so callers can match on one type. */
 export class DockerCommandError extends Error {
+  /** The argv, with every secret-shaped value redacted — this object reaches logs. */
   readonly args: readonly string[]
   readonly exitCode: number
   readonly stderr: string
 
   constructor(args: readonly string[], exitCode: number, stderr: string) {
-    super(`docker ${args.join(' ')} failed (exit ${exitCode}): ${stderr.trim()}`)
+    const safe = redactArgs(args)
+    super(`docker ${safe.join(' ')} failed (exit ${exitCode}): ${stderr.trim()}`)
     this.name = 'DockerCommandError'
-    this.args = args
+    this.args = safe
     this.exitCode = exitCode
     this.stderr = stderr
   }

@@ -44,15 +44,13 @@ function tailArgv(path: string, options: {
   wrapperPid?: number
 }): string[] {
   const argv = ['tail', '-c', `+${options.fromByte + 1}`]
-  if (options.follow) {
-    argv.push('-f')
-    // Without this the reader outlives the process it is reading. With it, `tail` performs a
-    // final read after the pid is gone, so nothing written just before the exit is lost.
-    if (options.wrapperPid !== undefined) {
-      argv.push(`--pid=${options.wrapperPid}`)
-    }
+  // A follow needs a pid to end on. Without one `tail -f` never returns, so the read is
+  // taken as a plain one to EOF: the process it would have followed is already gone, and a
+  // stream that never closes is worse than one that stops at what was written.
+  if (options.follow && options.wrapperPid !== undefined) {
+    argv.push('-f', `--pid=${options.wrapperPid}`)
   }
-  argv.push(path)
+  argv.push('--', path)
   return argv
 }
 
@@ -104,7 +102,7 @@ export interface LogStreamOptions extends ProcessLogsOptions {
   /** Current byte sizes, used as the starting point when the caller did not ask for a replay. */
   liveOffsets: Offsets
   /** Emitted once both streams end, when the process's outcome is known. */
-  terminal: () => Promise<ProcessLogEvent | undefined>
+  terminal: (cursor: ProcessLogCursor) => Promise<ProcessLogEvent | undefined>
 }
 
 /**
@@ -145,11 +143,16 @@ export function openLogStream(options: LogStreamOptions): ReadableStream<Process
         }
       }
       options.signal?.addEventListener('abort', abort, { once: true })
+      // A signal that was already aborted never fires its listener, and both `tail`
+      // processes would then run until the journalled process ended on its own.
+      if (options.signal?.aborted === true) {
+        abort()
+      }
 
       void Promise.all(pumps.map(pump => pump.done))
         .then(async () => {
           if (options.signal?.aborted !== true) {
-            const terminal = await options.terminal()
+            const terminal = await options.terminal(formatCursor(offsets))
             if (terminal !== undefined) {
               controller.enqueue(terminal)
             }

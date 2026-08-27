@@ -48,7 +48,10 @@ try {
   const corepack = await session.run({ command: 'corepack enable pnpm && pnpm --version' })
   log('pnpm', corepack.exitCode === 0 ? corepack.stdout.trim() : `FAILED: ${corepack.stderr}`)
   if (corepack.exitCode !== 0) {
-    process.exit(1)
+    // Thrown rather than `process.exit(1)`: exiting here skips the `finally` below, so the
+    // container the probe created is left running on the host. A throw fails the probe just as
+    // loudly — an unhandled rejection exits nonzero — and lets `session.destroy()` run first.
+    throw new Error(`corepack setup failed (exit ${corepack.exitCode}): ${corepack.stderr.trim()}`)
   }
 
   const node = await session.run({ command: 'node --version' })
@@ -60,14 +63,25 @@ try {
     harnesses: [createClaudeCode()],
   })
 
-  log('RESULT', 'the adapter bootstrapped cleanly inside the sandbox')
-  log('detail', JSON.stringify(prepared, null, 2).slice(0, 400))
-
+  // The verification, before any success is announced. `prepareSandboxForHarness` resolving
+  // only says the recipe ran; the question the probe exists to answer is whether the CLI it
+  // installed actually answers, so a nonzero `claude --version` is a failed probe and not a
+  // footnote under a clean RESULT line. Thrown for the reason the corepack failure is: the
+  // `finally` has to run, and the process still has to exit nonzero so automation can tell a
+  // failed run from a successful one (cubic review, PR #7).
   const installed = await session.run({
     command: './node_modules/.bin/claude --version',
     workingDirectory: `${WORK_DIR}/.harness-bootstrap/claude-code`,
   })
-  log('claude', installed.exitCode === 0 ? installed.stdout.trim() : `absent: ${installed.stderr.trim()}`)
+  if (installed.exitCode !== 0) {
+    throw new Error(
+      `claude --version failed (exit ${installed.exitCode}): ${installed.stderr.trim()}`,
+    )
+  }
+  log('claude', installed.stdout.trim())
+
+  log('RESULT', 'the adapter bootstrapped cleanly inside the sandbox')
+  log('detail', JSON.stringify(prepared, null, 2).slice(0, 400))
   log('elapsed', `${Math.round((Date.now() - startedAt) / 1000)}s`)
 }
 finally {

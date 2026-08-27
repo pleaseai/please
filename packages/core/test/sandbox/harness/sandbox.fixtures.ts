@@ -1,3 +1,11 @@
+/*
+ * Vendored from `chatbot-pf/pleaseworks` (`packages/harness-sandbox/src/sandbox.fixtures.ts`), relicensed from
+ * FSL-1.1-MIT to Apache-2.0 by the copyright holder, Passion Factory, Inc.
+ *
+ * Comments below naming paths such as `apps/cf-orchestrator/…`, `run/run-workflow.ts` or
+ * sibling packages refer to that originating codebase, not to this repository. They are kept
+ * because they record why each obligation exists.
+ */
 /**
  * An in-memory {@link SandboxProvider} for this package's tests.
  *
@@ -169,6 +177,11 @@ function decode(content: string, encoding?: string): Uint8Array {
     return Uint8Array.from(binary, character => character.charCodeAt(0))
   }
   return new TextEncoder().encode(content)
+}
+
+/** The inverse of {@link decode} for the one encoding the contract names besides UTF-8. */
+function encodeBase64(bytes: Uint8Array): string {
+  return btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''))
 }
 
 function streamOf(
@@ -381,7 +394,14 @@ function fakeReadFile(
       }
       return Promise.resolve(stream)
     }
-    const content: SandboxFileContent = { content: new TextDecoder().decode(bytes), encoding: 'utf-8' }
+    const content = readOptions?.encoding === 'base64'
+      // The mirror of {@link decode}, which the write half already gets right: a base64 write
+      // stores raw bytes, so a base64 read has to hand those bytes back base64-encoded. Decoding
+      // them as UTF-8 and labelling the result `utf-8` would answer a `SandboxFileContent` that
+      // no backend could produce, and a test reading a base64-stored file back through the
+      // contract overload would assert against wrong bytes (cubic review, PR #7).
+      ? { content: encodeBase64(bytes), encoding: 'base64' } satisfies SandboxFileContent
+      : { content: new TextDecoder().decode(bytes), encoding: 'utf-8' } satisfies SandboxFileContent
     return Promise.resolve(content)
   }) as SandboxSession['readFile']
 }
