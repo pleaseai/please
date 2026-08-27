@@ -1,0 +1,25 @@
+packages/core/test/sandbox/docker/backend.test.ts
+  s_73d750f80c9b94::t_b77b7e49115094 295,300,303-314
+packages/core/test/sandbox/docker/journal.test.ts
+  s_73d750f80c9b94::t_b4e76e301d1c05 1-44
+packages/core/src/sandbox/harness/demux.ts
+  s_73d750f80c9b94::t_37fac56b6fb8ac 27,29-52,58,86-87,110,123
+packages/core/test/sandbox/harness/process.demux.test.ts
+  s_73d750f80c9b94::t_7479ad9a40038e 10,12-21,31,33-35,38,77-85,94-96,100-101,112,114-117,119,122-125,129-130,132,135-138,142-143,145-153
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e90fcef9aabb13bce6bc616fc28eb2a06a0e3601",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
