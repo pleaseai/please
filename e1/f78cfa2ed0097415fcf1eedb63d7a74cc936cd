@@ -1,0 +1,23 @@
+packages/core/scripts/probe-claude-dir.ts
+  s_73d750f80c9b94::t_f94c2cd37c7666 55,108-128,130-131
+packages/core/src/sandbox/docker/session.ts
+  s_73d750f80c9b94::t_5b8b629b837dd7 128-131,150-160
+packages/core/src/sandbox/docker/container.ts
+  s_73d750f80c9b94::t_4f167ba73ba699 47-51,104-111,113,134,147
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e1f78cfa2ed0097415fcf1eedb63d7a74cc936cd",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
