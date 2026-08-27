@@ -1,0 +1,25 @@
+docs/project-layout.md
+  s_8ac8864df591d2::t_9e2bc8c7f2fd0d 52-54,118-119
+README.ko.md
+  s_8ac8864df591d2::t_bf5e8ff817a41d 23-24,28-30
+  s_8ac8864df591d2::t_175e5fc9d274d9 31
+README.md
+  s_8ac8864df591d2::t_bf5e8ff817a41d 24-26,30-32
+  s_8ac8864df591d2::t_476cb7ceca1aa1 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "ee6c17395ec570b708af37e7fb64964f00a00e48",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "unknown"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
