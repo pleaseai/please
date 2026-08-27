@@ -1,0 +1,66 @@
+packages/core/test/sandbox/harness/provider.test.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-220,222-266
+  s_73d750f80c9b94::t_518bd8c996523d 221
+packages/core/src/sandbox/contract/types.ts
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-322
+packages/core/src/sandbox/harness/best-effort.ts
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-56
+packages/core/test/sandbox/harness/process.test.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-431
+packages/core/src/sandbox/harness/session.ts
+  s_73d750f80c9b94::t_c2749194dd0c06 34
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-33,35-97
+packages/core/src/sandbox/contract/index.ts
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-37
+packages/core/src/sandbox/harness/provider.ts
+  s_73d750f80c9b94::t_c2749194dd0c06 19
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-18,20-92
+packages/core/test/sandbox/harness/session.test.ts
+  s_73d750f80c9b94::t_518bd8c996523d 4
+  s_73d750f80c9b94::t_f6f0496db80697 1-3,5-160
+packages/core/src/sandbox/harness/files.ts
+  s_73d750f80c9b94::t_c2749194dd0c06 63
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-62,64-374
+packages/core/test/sandbox/harness/sandbox.fixtures.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-500
+packages/core/test/sandbox/harness/process.listeners.test.ts
+  s_73d750f80c9b94::t_518bd8c996523d 39
+  s_73d750f80c9b94::t_f6f0496db80697 1-38,40-202
+packages/core/src/sandbox/harness/process.ts
+  s_73d750f80c9b94::t_c2749194dd0c06 29
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-28,30-435
+NOTICE
+  s_73d750f80c9b94::t_b7283fa585f6cc 9-21
+packages/core/src/sandbox/harness/index.ts
+  s_73d750f80c9b94::t_9a135df3b45a4c 1-26
+packages/core/test/sandbox/harness/files.test.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-280
+packages/core/package.json
+  s_73d750f80c9b94::t_6fde28c24cb331 48
+  s_73d750f80c9b94::t_f4fb46314bedd0 16-25,44-45
+  s_73d750f80c9b94::t_4fefc30a64ad35 46
+packages/core/test/sandbox/harness/process.cleanup.test.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-433
+packages/core/tsup.config.ts
+  s_73d750f80c9b94::t_f4fb46314bedd0 4-8
+packages/core/test/sandbox/harness/files.cancellation.test.ts
+  s_73d750f80c9b94::t_f6f0496db80697 1-496
+bun.lock
+  s_73d750f80c9b94::t_f45b21f2a24274 23-25,27,34-43,264-265,322-323,336-337,342-343,524-525,626-627,912-913,946-947,962-963
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f6941e4ddb04e99dbdb46df8d03d385b8ca819c1",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
