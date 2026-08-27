@@ -1,0 +1,21 @@
+eslint.config.ts
+  s_8ac8864df591d2::t_60c37bf4ad3e6a 3-21
+CLAUDE.md
+  s_8ac8864df591d2::t_6e184f9502dcc4 17-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "4b3947da0b0108c4584f4588a2450726ec3a962d",
+  "prompts": {},
+  "sessions": {
+    "s_8ac8864df591d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a9e4ed08-ae5b-4d2c-a5d6-f0546e9f7868",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
