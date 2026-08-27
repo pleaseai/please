@@ -7,14 +7,18 @@
  * because they record why each obligation exists.
  */
 /**
- * What the demux does with a sink nobody is reading — the one place it can grow without bound.
+ * The demux at volume — tens of megabytes, uneven interleaving, and a lagging consumer.
  *
- * Its own file rather than a fourth block in `process.test.ts`, which is at the 500-line
- * ceiling, and a separate question in any case: every test there is about *routing*, and reads
- * its answer off a handful of short strings. These are about capacity, so each one has to push
- * a cap's worth of bytes through the split, and the assertions are byte counts rather than
- * text. Megabyte payloads also make the interleaving matter, which the short fixtures cannot
- * show (cubic review, PR #7).
+ * Its own file rather than a fourth block in `process.test.ts`, which is at the 500-line ceiling,
+ * and a separate question in any case: every test there is about *routing* and reads its answer
+ * off a handful of short strings. These push real payloads through, so the assertions are byte
+ * counts, and the interleaving and the consumers' relative pace both matter.
+ *
+ * They exist because a per-sink byte cap was attempted here and withdrawn — see the hazard note
+ * at the top of `demux.ts`. These are the cases that measured it failing working callers, kept as
+ * regression cover for the property that survived: whatever the volume, the interleaving or the
+ * consumers' pace, both streams deliver every byte and neither is ever failed (cubic review,
+ * PR #7).
  */
 import type { ProcessLogEvent } from '../../../src/sandbox/contract'
 import { describe, expect, it } from 'bun:test'
@@ -24,13 +28,14 @@ import { splitProcessStreams } from '../../../src/sandbox/harness/demux'
 const CHUNK = 1024 * 1024
 
 /**
- * A source shape that puts more than the 8 MiB cap through each stream, unevenly.
+ * An uneven source shape: two `stdout` events per `stderr` event, forty times over.
  *
- * Two `stdout` events per `stderr` event, twelve times over: 24 MiB of `stdout` and 12 MiB of
- * `stderr`, each comfortably past the cap, and neither aligned with the other's pulls.
+ * 80 MiB of `stdout` against 40 MiB of `stderr`, and — the part that matters — not aligned with
+ * either consumer's pulls, so each stream's drain routes the other's chunks rather than every
+ * event arriving during its own stream's pull. An alternating pattern exercises none of that.
  */
 const PATTERN = ['stdout', 'stdout', 'stderr'] as const
-const ROUNDS = 12
+const ROUNDS = 40
 
 /**
  * `pattern` repeated `rounds` times, one megabyte chunk per event, allocated as it is pulled.
@@ -69,8 +74,15 @@ function chunksOf(pattern: readonly ('stdout' | 'stderr')[], rounds: number, sou
   return pattern.filter(entry => entry === source).length * rounds
 }
 
-/** Total bytes a stream yields, without holding the whole payload as one string. */
-async function byteCount(stream: ReadableStream<Uint8Array>): Promise<number> {
+/**
+ * Total bytes a stream yields, optionally reading at a deliberately slow cadence.
+ *
+ * `lagPerRead` awaits a macrotask after every chunk, which models any consumer doing real work
+ * or I/O per chunk. It is not a cosmetic delay: microtasks starve macrotasks completely, so a
+ * lagging consumer gets no turn at all while the other stream's drain runs, and its queue grows
+ * to the whole payload. That is the case a byte cap could not survive.
+ */
+async function byteCount(stream: ReadableStream<Uint8Array>, lagPerRead = false): Promise<number> {
   const reader = stream.getReader()
   let total = 0
   for (;;) {
@@ -79,16 +91,14 @@ async function byteCount(stream: ReadableStream<Uint8Array>): Promise<number> {
       return total
     }
     total += value.length
+    if (lagPerRead) {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    }
   }
 }
 
-describe('splitProcessStreams under a neglected sink', () => {
-  /**
-   * The cap must not fire under normal use, and this is what "normal use" means: `run` drains
-   * both streams through one `Promise.all`, so neither sink ever holds more than the chunk the
-   * other pull routed to it. Twelve MiB per stream is comfortably past the cap and none of it
-   * is ever buffered.
-   */
+describe('splitProcessStreams at volume', () => {
+  /** What `run` does: both streams drained through one `Promise.all`, 120 MiB between them. */
   it('delivers everything to a consumer reading both streams concurrently', async () => {
     const { stdout, stderr } = splitProcessStreams(eventStream(PATTERN, ROUNDS))
 
@@ -99,44 +109,48 @@ describe('splitProcessStreams under a neglected sink', () => {
   })
 
   /**
-   * And the case the cap exists for. Reading `stdout` to completion routes every `stderr` event
-   * into a sink nobody is pulling, which before the cap grew until the worker died.
+   * The case that withdrew the cap, kept as the regression test for it.
    *
-   * Both halves are asserted, because the guard is only worth having if it is surgical: the
-   * stream being read still completes with every byte, and the failure lands on the stream that
-   * was neglected, carrying a message that says what to do about it.
+   * `stderr` is read to completion, just one macrotask slower per chunk than `stdout` — and
+   * because microtasks starve macrotasks, it takes nothing at all while `stdout`'s drain routes
+   * the entire 40 MiB into its queue. Every byte must still arrive. A guard that bounded this
+   * sink by occupancy, or by whether its consumer had read anything recently, failed it.
    */
-  it('errors only the neglected stream, and only after the cap', async () => {
+  it('delivers everything to a consumer reading one stream a macrotask slower', async () => {
     const { stdout, stderr } = splitProcessStreams(eventStream(PATTERN, ROUNDS))
 
-    expect(await byteCount(stdout)).toBe(chunksOf(PATTERN, ROUNDS, 'stdout') * CHUNK)
-    // The whole message, not a fragment: it names the stream that failed, why it failed, and
-    // the two things the caller can do instead. A guard whose error said only "buffer full"
-    // would send the reader looking for a bug in the sandbox.
-    await expect(byteCount(stderr)).rejects.toThrow(
-      /sandbox stderr buffered more than \d+ bytes because it was not being read while the other stream was drained; read stdout and stderr concurrently, or cancel\(\) the one you do not need/,
-    )
+    expect(await Promise.all([byteCount(stdout), byteCount(stderr, true)])).toEqual([
+      chunksOf(PATTERN, ROUNDS, 'stdout') * CHUNK,
+      chunksOf(PATTERN, ROUNDS, 'stderr') * CHUNK,
+    ])
   })
 
   /**
-   * A stream the consumer explicitly gave up on was already dropped from `sinks`, so nothing is
-   * ever enqueued to it and it cannot overflow. Cancelling is the documented way to say "I am
-   * not reading this", and it must not be turned into an error by the guard that punishes a
-   * consumer for never saying so.
+   * And the other order, because the two streams are not symmetrical in construction: `stdout`'s
+   * controller is created first and pulls first.
    */
-  it('never errors a stream the consumer cancelled, however much flows past', async () => {
+  it('delivers everything when it is the first stream that lags', async () => {
+    const { stdout, stderr } = splitProcessStreams(eventStream(PATTERN, ROUNDS))
+
+    expect(await Promise.all([byteCount(stdout, true), byteCount(stderr)])).toEqual([
+      chunksOf(PATTERN, ROUNDS, 'stdout') * CHUNK,
+      chunksOf(PATTERN, ROUNDS, 'stderr') * CHUNK,
+    ])
+  })
+
+  /**
+   * Cancelling is the documented way to say "I am not reading this": the sink is dropped and its
+   * events are discarded, while the drain keeps running at full speed for the other stream.
+   */
+  it('serves the other stream at full volume after one is cancelled', async () => {
     const { stdout, stderr } = splitProcessStreams(eventStream(PATTERN, ROUNDS))
     await stderr.cancel()
 
     expect(await byteCount(stdout)).toBe(chunksOf(PATTERN, ROUNDS, 'stdout') * CHUNK)
   })
 
-  /**
-   * The exemption for the stream being pulled, stated as a test: a single chunk larger than the
-   * cap is still delivered to the consumer asking for it. Capping the pulled sink too would
-   * fail a read for a caller doing everything right.
-   */
-  it('delivers a single chunk larger than the cap to the stream being read', async () => {
+  /** One very large chunk, since nothing here may assume a payload arrives in small pieces. */
+  it('delivers a single chunk far larger than any one round', async () => {
     const oversized = new Uint8Array(chunksOf(PATTERN, ROUNDS, 'stdout') * CHUNK)
     const { stdout } = splitProcessStreams(new ReadableStream<ProcessLogEvent>({
       start: (controller) => {

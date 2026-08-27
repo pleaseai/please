@@ -24,35 +24,38 @@ export interface SplitProcessStreams {
 type StreamSource = 'stdout' | 'stderr'
 
 /**
- * How many bytes one sink may hold for a consumer that is not reading it.
+ * **Known hazard, deliberately not guarded: an unread sink buffers without bound.**
  *
- * The number is deliberately generous, because the payload here is a coding agent's own build
- * and test output and this only ever fires on a sink nobody is pulling: a consumer reading both
- * streams never accumulates anything (see {@link routeChunk}), so 8 MiB is not a budget anyone
- * spends, it is the distance between "slow consumer" and "consumer that is never coming back".
- * A 32-bit `Uint8Array` of that size is ~0.8% of a default 1 GiB workerd heap, so the guard
- * trips well before the worker is in trouble and well after any plausible burst.
+ * {@link drainUntil} enqueues the *other* stream's bytes as a side effect of serving the stream
+ * being pulled, consulting nothing about that other consumer's demand, so a caller that reads one
+ * stream while ignoring the other accumulates the whole of the ignored one in memory — and a
+ * sandbox log is exactly the payload that makes that fatal.
+ *
+ * A per-sink byte cap was built for this and then withdrawn, because every version of it failed a
+ * consumer that was working correctly. What was measured (cubic review, PR #7):
+ *
+ * - There is no backpressure from a sink to the shared reader, and there cannot be: pausing the
+ *   drain until the neglected consumer catches up is precisely the hang the routing exists to
+ *   prevent, and a consumer that reads one stream to completion before touching the other would
+ *   deadlock rather than merely run out of memory.
+ * - So an *occupancy* cap fires on a live consumer that is simply slower than the other one. With
+ *   a one-macrotask lag per read and 40 MiB through each stream, real occupancy reached 9 MiB and
+ *   was still climbing — a stream being read to completion, errored.
+ * - A *stall* variant — error only a sink whose consumer has taken nothing — fails for a deeper
+ *   reason: the drain resolves on microtasks and a consumer on a macrotask cadence gets no turn
+ *   at all while it runs (measured: 100 000 microtask turns before one `setTimeout(0)` fired), so
+ *   "has taken nothing" cannot distinguish a slow consumer from an absent one.
+ *
+ * Bounding this needs something the contract does not currently offer — an obligation on callers
+ * to read both streams or `cancel()` one, which would make pausing the drain legitimate, or a
+ * spill destination that is not the heap. Until then the hazard is documented rather than traded
+ * for a guard that breaks working callers.
  */
-const SINK_BUFFER_LIMIT = 8 * 1024 * 1024
 
 interface DemuxState {
   reader: ReadableStreamDefaultReader<ProcessLogEvent>
   sinks: Record<StreamSource, ReadableStreamDefaultController<Uint8Array> | undefined>
-  /**
-   * Bytes enqueued to each sink and not yet taken by its consumer.
-   *
-   * Counted here rather than read off `ReadableStreamDefaultController.desiredSize`, and the
-   * reason is what `desiredSize` measures: it is `highWaterMark - queueTotalSize`, and both are
-   * in *chunks* unless the stream is built with a byte-counting `size()` strategy. Giving these
-   * streams one would answer the byte question — the runtime maintains `queueTotalSize` exactly,
-   * incrementing on enqueue and decrementing as the consumer reads — but it would also raise the
-   * high-water mark from one chunk to the cap, and `pull` is called for as long as `desiredSize`
-   * stays positive. The demux would stop being demand-driven and start prefetching a cap's worth
-   * of output per stream, which is a different streaming contract than the one every test here
-   * pins. So the mark stays at its default and the bytes are counted directly.
-   */
-  buffered: Record<StreamSource, number>
-  /** Sources whose consumer cancelled, or whose buffer overflowed. Both stop being enqueued to. */
+  /** Sources whose consumer cancelled. The reader is released once both have. */
   abandoned: Set<StreamSource>
   ended: boolean
 }
@@ -74,67 +77,16 @@ function finishDemux(state: DemuxState, cause?: unknown): void {
 }
 
 /**
- * Hand one event's bytes to its sink, or drop a sink that has stopped taking them.
- *
- * The routing {@link drainUntil} does for the *other* stream is what makes the demux work and
- * is also the only place it can grow without bound: those bytes are enqueued as a side effect
- * of serving the stream being pulled, so nothing about the other consumer's demand is consulted
- * — and a consumer that reads one stream while ignoring the other therefore accumulates the
- * whole of the ignored one in memory. A sandbox log is exactly the payload that makes that
- * fatal, and the failure mode was the worker dying rather than anything the caller could see.
- *
- * The cap is on the *sink*, never on the drain. Stopping the drain to wait for the neglected
- * consumer is the one thing this design cannot do — it is precisely the hang the routing exists
- * to prevent, and it would be reintroduced for every consumer that reads a single stream. So an
- * over-cap sink is errored and then treated exactly like a cancelled one: struck from `sinks`,
- * added to `abandoned`, its events discarded from here on while the drain runs at full speed
- * for the other stream. Nothing can hang, and nothing that *is* being read is affected.
- *
- * `wanted` is exempt because it cannot overflow: `drainUntil` returns the moment it enqueues
- * for `wanted`, so that sink takes at most one chunk per pull, and `pull` is only ever called
- * on an empty queue. The exemption matters anyway — it is what guarantees a single chunk larger
- * than the cap still reaches the consumer asking for it.
- *
- * The message names the stream and the fix because nothing else in the caller's world explains
- * why a stream it never touched has failed (cubic review, PR #7).
- */
-function routeChunk(state: DemuxState, source: StreamSource, data: Uint8Array, wanted: StreamSource): void {
-  const sink = state.sinks[source]
-  if (sink === undefined) {
-    return
-  }
-  const buffered = state.buffered[source] + data.byteLength
-  if (source !== wanted && buffered > SINK_BUFFER_LIMIT) {
-    state.sinks[source] = undefined
-    state.abandoned.add(source)
-    state.buffered[source] = 0
-    sink.error(new Error(
-      `sandbox ${source} buffered more than ${SINK_BUFFER_LIMIT} bytes because it was not being `
-      + `read while the other stream was drained; read stdout and stderr concurrently, or `
-      + `cancel() the one you do not need`,
-    ))
-    return
-  }
-  state.buffered[source] = buffered
-  sink.enqueue(data)
-}
-
-/**
  * Read the shared source until `wanted` sees a chunk, routing everything passed on the way.
  *
  * Draining only the source being pulled would hang a consumer that reads `stderr` to
  * completion before touching `stdout`: the events it needs would sit unread behind events
  * for the other stream. `terminal` and `truncated` events are dropped — the harness's
  * streams are bytes and have no representation for either, and the exit reaches the caller
- * through `wait()`. What that routing costs when the other consumer never arrives, and the
- * bound that keeps it survivable, are {@link routeChunk}'s subject.
+ * through `wait()`. What that routing costs when the other consumer never arrives is the
+ * hazard note at the top of this file.
  */
 async function drainUntil(state: DemuxState, wanted: StreamSource): Promise<void> {
-  // `pull` is called only while `desiredSize` is positive, and with the default queuing
-  // strategy — one chunk of high-water mark, chunks counted by number — that is true only of an
-  // empty queue. So being called at all is proof the consumer has taken everything previously
-  // enqueued for `wanted`, and zero is the exact count rather than an approximation of one.
-  state.buffered[wanted] = 0
   for (;;) {
     if (state.ended) {
       return
@@ -155,7 +107,7 @@ async function drainUntil(state: DemuxState, wanted: StreamSource): Promise<void
     if (event.type !== 'stdout' && event.type !== 'stderr') {
       continue
     }
-    routeChunk(state, event.type, event.data, wanted)
+    state.sinks[event.type]?.enqueue(event.data)
     if (event.type === wanted) {
       return
     }
@@ -168,14 +120,12 @@ async function drainUntil(state: DemuxState, wanted: StreamSource): Promise<void
  * Both outputs read from a single reader, which is what {@link drainUntil} is shaped around.
  * A cancelled consumer drops its sink rather than releasing the reader, so the drain keeps
  * discarding that source's events for the other stream's benefit; only the second cancel
- * releases the shared source. A sink that overflows {@link SINK_BUFFER_LIMIT} joins that same
- * path, errored rather than closed — the difference is only how the consumer finds out.
+ * releases the shared source.
  */
 export function splitProcessStreams(events: ReadableStream<ProcessLogEvent>): SplitProcessStreams {
   const state: DemuxState = {
     reader: events.getReader(),
     sinks: { stdout: undefined, stderr: undefined },
-    buffered: { stdout: 0, stderr: 0 },
     abandoned: new Set(),
     ended: false,
   }
