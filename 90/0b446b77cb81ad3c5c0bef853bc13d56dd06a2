@@ -1,0 +1,30 @@
+packages/core/scripts/probe-adapter-bootstrap.ts
+  s_73d750f80c9b94::t_cb7578d74b19ab 1-49,53-76
+  s_73d750f80c9b94::t_eb8c79474b0b0e 50-52
+packages/core/scripts/probe-claude-dir.ts
+  s_73d750f80c9b94::t_555333260aec56 55-61
+  s_73d750f80c9b94::t_563cbe725eb9bb 119-120,125
+  s_73d750f80c9b94::t_4149351f8c5b0f 1-20,22-30,39-54,62-78,88-89,98-102,104-106,108-118,121-124,126-131,133-153
+  s_73d750f80c9b94::t_3b36a746e9ab14 31-38,79-87,103,107,132
+  s_73d750f80c9b94::t_9394b82981fa27 90-91,93-97
+  s_73d750f80c9b94::t_d105d0f77f7fff 92
+  s_73d750f80c9b94::t_84783eb92582fd 21
+packages/core/tsconfig.json
+  s_73d750f80c9b94::t_6fde28c24cb331 3-7
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "900b446b77cb81ad3c5c0bef853bc13d56dd06a2",
+  "prompts": {},
+  "sessions": {
+    "s_73d750f80c9b94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b17221d5-e1f9-4467-b45c-52695798df5a",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
