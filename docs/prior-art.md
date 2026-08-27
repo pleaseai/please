@@ -3,13 +3,22 @@
 What the neighbouring frameworks actually do, read from their own documentation rather than from
 recollection, so that design arguments here start from what exists.
 
-All three sources read **2026-08-26**. Documentation sites show the latest version, so re-read
-before leaning on any specific signature.
+The flue and eve sections were first read **2026-08-26** and extended **2026-08-27**. The AI SDK
+harness contract was re-read and expanded **2026-08-27** across the overview, harness agent,
+adapters, tools, skills, workflow utilities, terminal UI and Claude Code adapter pages; the `ui`
+page is the one harness page still unread. Documentation sites show the latest version, so re-read
+before leaning on any specific signature. The harness packages are marked experimental and warn of
+breaking changes between releases.
 
 ## The AI SDK harness contract
 
-Sources: [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent),
-[harness adapters](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-adapters)
+Sources: [overview](https://ai-sdk.dev/docs/ai-sdk-harnesses/overview),
+[harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent),
+[harness adapters](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-adapters),
+[tools](https://ai-sdk.dev/docs/ai-sdk-harnesses/tools),
+[skills](https://ai-sdk.dev/docs/ai-sdk-harnesses/skills),
+[workflow utilities](https://ai-sdk.dev/docs/ai-sdk-harnesses/workflow-utilities),
+[terminal UI](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui)
 
 `HarnessAgent` (from `@ai-sdk/harness/agent`) is an AI SDK `Agent` whose turns run through a
 **harness adapter**. The adapter supplies the runtime, its native conversation history, its built-in
@@ -46,6 +55,83 @@ The bridge/host split is the load-bearing distinction for us: a bridged adapter 
 runs real processes and exposes a port, a host adapter does not. `prepareHarnessSandboxTemplate()`
 and `prepareSandboxForHarness()` exist for the bootstrap side of that.
 
+### What the contract actually accepts (read 2026-08-27)
+
+The shapes below are the ones that constrain a project layout, because they decide what has to be
+authored on disk and what has to be built before a turn can run.
+
+**`skills` takes inline objects, not paths.** Each entry is
+`{ name, description, content, files?: Array<{ path, content }> }`, where `files` carries
+skill-relative POSIX paths. No documented form accepts a directory or a file path, and no `Skill`
+type is named. Anything authored on disk has to be read and turned into these objects before the
+agent is constructed.
+
+**There are three tool surfaces, and `tools` is the one that runs in the host process.** Built-in
+tools (`read`, `write`, `edit`, `bash`, `grep`, `glob`, `webSearch`) belong to the adapter runtime;
+`tools` are ordinary AI SDK tools executed by the host, with their results submitted back to the
+runtime; external MCP tools are configured on the adapter (`mcpServers`), not on the agent. A host
+tool may reach the sandbox through `experimental_sandbox` (read/write files, run commands) but
+cannot stop the sandbox or change its network policy. `activeTools` and `inactiveTools` name entries
+from the combined built-in + host set and are mutually exclusive — the settings type prevents
+combining them, and `HarnessAgent` throws at runtime when both are given.
+
+**`permissionMode` has three values**: `allow-all` (default), `allow-edits`, `allow-reads`. It
+governs adapter-native built-in permissions only, and `allow-edits` / `allow-reads` only request
+approval where the adapter supports built-in approvals — an adapter that supports neither native
+filtering nor approval throws instead. Host tools are governed separately by `toolApproval`, whose
+statuses are `not-applicable`, `approved`, `user-approval` and `denied`.
+
+**Files reach the sandbox through hooks, not a mount option.** `sandboxConfig` takes `workDir`,
+`bootstrapHash`, `onBootstrap({ session, abortSignal })` and
+`onSession({ session, sessionWorkDir, abortSignal })`. `onBootstrap` runs during template creation,
+after adapter bootstrap and before the snapshot is published, so its output is baked into a reusable
+snapshot and `bootstrapHash` is what invalidates it. `onSession` runs after every session is
+acquired, resumed ones included. The documented way to place a file is `writeTextFile` inside a hook.
+
+**`instructions` is a single string**, appended to the system prompt where the adapter supports it
+and otherwise prepended to the first user prompt.
+
+**Durable workflows are already in the contract.** `@ai-sdk/workflow-harness` runs `HarnessAgent`
+turns inside a workflow. `createHarnessWorkflowState()` opens the state; a `'use step'` function
+calls either `runHarnessAgentStep()` (semantic agent steps, with the agent configured
+`stopWhen: isStepCount(1)` so one `stream()` is one step) or `runHarnessAgentTimeSlice()`
+(wall-clock slices, a 750-second budget by default, `timeSliceSeconds` to change it); the caller
+re-schedules the step while `state.status === 'ready_for_next_step'`, and
+`finalizeHarnessWorkflow()` returns the result or throws. Each step result carries `continueFrom`,
+which continues the same unfinished turn in the next step. Across separate workflow runs the opaque
+`resumeFrom` has to be persisted by the application, and a stable `sessionId` is what gives the
+sandbox an identity that survives runs.
+
+`@ai-sdk/tui` (`runAgentTUI`) renders an interactive terminal interface over a session; the page
+frames it as developer-facing rather than production hosting.
+
+### The Claude Code adapter's own settings (read 2026-08-27)
+
+Source: [Claude Code adapter](https://ai-sdk.dev/providers/ai-sdk-harnesses/claude-code)
+
+`createClaudeCode()` accepts `auth` (`'auto' | 'direct' | 'ai-gateway'`), `credentialForwarding`,
+`mcpServers` (keyed by name; the server-definition schema is not given), `model`, `maxTurns`, `env`
+(merged over the bridge process environment, taking precedence), `thinking` (`type` is
+`'enabled' | 'disabled' | 'adaptive'`; `display` is `'summarized' | 'omitted'` and applies only to
+`enabled` and `adaptive`, defaulting to adaptive/summarized), `port`, `startupTimeoutMs` and
+`mintBridgeToken`.
+
+The adapter is built on `@anthropic-ai/claude-agent-sdk` — not the Claude Code CLI — and installs
+its bridge dependencies inside the sandbox when the first session begins, then talks to the host
+over a sandbox-exposed WebSocket.
+
+**What the adapter page does not document:** a `.claude` directory, a settings file, `CLAUDE.md`,
+plugins, subagents, hooks, slash commands, settings-source selection, or allowed/disallowed tool
+lists. None of these appear as adapter settings.
+
+This is load-bearing and uncomfortable, because the README argues that reusing the harness brings
+its ecosystem along. Measured against the contract as documented, that holds for the built-in tools,
+the native conversation state and compaction, and the session/resume story — and does not hold for
+skills, which have to be rebuilt as inline objects; for the permission model, which flattens to
+three values; or for plugins, which the contract does not mention at all. Whether a `.claude`
+directory seeded into the workspace by `onSession` is read by the Agent SDK is **not documented
+either way**, and is worth verifying against the real package before any design leans on it.
+
 **What this means for `please`:** the agent loop, the adapter contract, and structured output are
 already someone else's problem. What is left is placement (which sandbox, which target), reach
 (which channel), and sequencing (which workflow).
@@ -57,9 +143,12 @@ Source: [flueframework.com/docs](https://flueframework.com/docs)
 **Project layout** is lightly prescribed. `src/app.ts` is the required server and router entrypoint;
 `src/db.ts` and `src/cloudflare.ts` are optional specialized entrypoints; agent code sits in
 `agent.ts` with `skills/`, `tools/`, `subagents/`, `channels/` beside it, grouped under
-`agents/<name>/` for multi-agent projects. Flue resolves `.flue/`, then `src/`, then the project
-root, taking the first that exists rather than merging. `flue.config.ts` can override entry paths.
-Notably, **there is no workflow directory convention.**
+`agents/<name>/` for multi-agent projects, which also get an `agents/shared/` area. Flue resolves
+`.flue/`, then `src/`, then the project root, taking the first that exists rather than merging —
+if `.flue/` exists, the entrypoints and the `'use agent'` scan resolve there and the other locations
+are not consulted. `flue.config.ts` can override the `app.ts` / `db.ts` / `cloudflare.ts` paths, and
+`vite build` writes to `dist/` unless `vite.config.ts` says otherwise. Notably, **there is no
+workflow directory convention.**
 
 **Targets.** Cloudflare compiles each exported agent into a generated Durable Object class inside
 one Worker (`export function SupportChat()` → `FlueSupportChatAgent`, bound as
@@ -110,8 +199,20 @@ Sources: [eve.dev/docs](https://eve.dev/docs/getting-started),
 `instructions.md` (root system prompt), `agent.ts` (model, compaction, build), `tools/`,
 `connections/` (MCP or OpenAPI), `skills/`, `hooks/`, `sandbox/`, `subagents/<id>/agent.ts`,
 `schedules/`, `channels/`. Names come from paths — `tools/get_weather.ts` is `get_weather` — so
-there is no `name` field to keep in sync. `defineSchedule` is the one API the getting-started page
+there is no `name` field to keep in sync. The root agent instead takes its name from `package.json`,
+or the directory name when there is none. `defineSchedule` is the one API the getting-started page
 names; the rest is convention.
+
+Three details read 2026-08-27 bear directly on placement. **Not everything authored is mounted**:
+`agent/sandbox/workspace/**` is copied into `/workspace/` at session start, while `agent/lib/` is
+import-only and never reaches the sandbox; a bare `agent/sandbox.ts` declares a sandbox with no
+seeded files. **Skills are seeded at runtime** into `$HOME/.agents/skills/`, with `/workspace/skills/`
+as the fallback. And **some things are root-only**: `channels/`, `schedules/` and
+`instrumentation.ts` cannot appear under a subagent, which may otherwise carry its own connections,
+hooks, skills, lib, sandbox, tools and nested subagents. `evals/` sits beside `agent/`, not inside
+it. A flat layout — `agent.ts`, `instructions.md`, `tools/`, `skills/` directly beside
+`package.json` — is permitted when the application root is the agent root, but the nested form is
+the documented preference.
 
 **Channels** are root-agent-only entry points under `agent/channels/`. Slack is scaffolded with
 `eve add channel/slack`, and authenticates through Vercel Connect
@@ -123,6 +224,14 @@ integration's credential and webhook story is Vercel's, not the framework's.
 `agent/extensions/browser.ts` default-exporting `browser({})`, with the filename becoming the tool
 namespace (`browser__navigate`, `browser__click`, …). It requires a sandbox that can run real
 processes (Vercel Sandbox, Docker, microsandbox).
+
+> Read 2026-08-27, the getting-started page describes no `extensions/` directory and presents
+> extension capability as arriving through tools, connections, skills, hooks, lib, sandboxes and
+> subagents instead. eve documents extensions on a page of their own,
+> [Extensions](https://eve.dev/docs/extensions), as npm packages that are installed and mounted and
+> that contribute tools, skills, instructions, connections, channels, schedules, subagents and
+> hooks. That page, not the integrations page, is the source to read before `agent/extensions/` is
+> treated as the convention.
 
 **Evals** live in `evals/**/*.eval.ts` with one `evals.config.ts` per root, identity taken from the
 path. `defineEval({ async test(t) { … } })` drives a real agent server over the same HTTP protocol
@@ -151,5 +260,18 @@ Carrying Cloudflare and Vercel side by side means those asymmetries have to be d
 than inherited.
 
 **Still open.** Neither answers what `please` most needs to decide: what a channel handler receives
-when the same agent is reachable from Slack, GitHub and Linear at once, and how a bridged harness's
-sandbox lifetime is tied to a durable workflow's step boundaries.
+when the same agent is reachable from Slack, GitHub and Linear at once. The companion question — how
+a bridged harness's sandbox lifetime is tied to a durable workflow's step boundaries — turned out not
+to be open. `@ai-sdk/workflow-harness` defines the step boundary (`runHarnessAgentStep()` or
+`runHarnessAgentTimeSlice()` inside a `'use step'` function), `continueFrom` carries an unfinished
+turn between steps, and a stable `sessionId` plus an application-persisted `resumeFrom` carries a
+session between runs. What is left is where that resume state lives per channel-originated request,
+and whether a Cloudflare Workflow and a Vercel Workflow can run the same authored step.
+
+The contract also opened questions the neighbours never had to answer. Host-executed `tools` run
+wherever the application runs, so the same authored directory behaves differently on a Worker with a
+per-invocation CPU limit than on a Node deployment with a real filesystem. Files reach the runtime by
+three different routes with three different lifetimes — inline `skills`, per-session `onSession`
+writes, and snapshot-baked `onBootstrap` output — so a layout that files them together hides which
+is which. And whether an adapter-native `.claude` directory means anything once seeded is unverified,
+which is the single question most worth answering before the layout is settled.

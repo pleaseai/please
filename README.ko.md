@@ -20,10 +20,14 @@
 
 하네스를 재사용하면 따라오는 것이 둘 있다.
 
-- **생태계가 딸려 온다.** Claude Code의 도구, 권한 모델, 세션, 스킬, 플러그인은 하네스의 것이고
-  우리가 다시 얻어낼 대상이 아니다.
+- **생태계가 상당 부분 딸려 온다.** 내장 도구, 네이티브 대화 상태와 컨텍스트 압축, 세션과 재개,
+  지속형 워크플로 스테핑은 하네스의 것이고 우리가 다시 얻어낼 대상이 아니다.
 - **청구서를 결정한다.** Claude Code를 하네스로 구동하면 Claude Code 구독으로 돈다. 직접 만든 루프를
   Messages API에 물리면 같은 일을 토큰 단위로 청구한다.
+
+딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 인라인 객체로 다시 만들어야 하고, 권한 모델은 세 가지
+모드로 납작해지며, 플러그인·훅·서브에이전트는 계약에 아예 없다 —
+[`docs/project-layout.md`](docs/project-layout.md) 참고.
 
 하네스 경계 자체도 우리 것이 아니다 — AI SDK의
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent)와
@@ -107,13 +111,18 @@ mise run ci         # lint + type-check + test + build
 packages/
   core/           # @pleaseai/core — 플레이스홀더, 아직 아무것도 export 하지 않는다
 docs/
-  prior-art.md    # eve, flue, AI SDK 하네스가 이미 하고 있는 것
+  prior-art.md       # eve, flue, AI SDK 하네스가 이미 하고 있는 것
+  project-layout.md  # 레이아웃 제안과, 그것이 기다리는 열린 질문들
 ```
 
 ## 선행 사례
 
-[`docs/prior-art.md`](docs/prior-art.md)는 eve와 flue가 실제로 무엇을 하는지 — 각자의 공식 문서에서,
-날짜와 함께 — 기록한다. 여기서의 설계 논의가 기억이 아니라 존재하는 것에서 출발하도록.
+[`docs/prior-art.md`](docs/prior-art.md)는 eve, flue, 그리고 AI SDK 하네스 계약이 실제로 무엇을 하는지
+— 각자의 공식 문서에서, 날짜와 함께 — 기록한다. 여기서의 설계 논의가 기억이 아니라 존재하는 것에서
+출발하도록.
+
+[`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 첫 번째 논증이다. 제안 레이아웃,
+계약이 이미 우리 대신 정해 버린 것들, 그리고 아직 열려 있는 질문들.
 
 ## 기여
 
