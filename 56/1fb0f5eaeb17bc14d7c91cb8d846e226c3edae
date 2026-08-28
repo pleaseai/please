@@ -1,0 +1,19 @@
+release-please-config.json
+  s_e52bd959fc1034::t_6fe529019f67ea 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "561fb0f5eaeb17bc14d7c91cb8d846e226c3edae",
+  "prompts": {},
+  "sessions": {
+    "s_e52bd959fc1034": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f02b6263-aeba-4d8e-85ac-23ab5a29bf03",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
