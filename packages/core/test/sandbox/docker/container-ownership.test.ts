@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { describe, expect, it } from 'bun:test'
+import { containerName } from '../../../src/sandbox/docker/container'
 
 const CONTAINER_MODULE = join(import.meta.dir, '..', '..', '..', 'src', 'sandbox', 'docker', 'container.ts')
 
@@ -23,6 +24,16 @@ const CONTAINER_MODULE = join(import.meta.dir, '..', '..', '..', 'src', 'sandbox
 const FAKE_ABSENT = `#!/bin/sh
 printf '%s\\n' "$*" >> "$PLEASE_ARGV_LOG"
 case "$1" in container) exit 1 ;; esac
+exit 0
+`
+
+/** As {@link FAKE_ABSENT}, but slow to create, so an acquisition can be observed in flight. */
+const FAKE_SLOW = `#!/bin/sh
+printf '%s\\n' "$*" >> "$PLEASE_ARGV_LOG"
+case "$1" in
+  container) exit 1 ;;
+  run) sleep 0.5 ;;
+esac
 exit 0
 `
 
@@ -70,6 +81,10 @@ ${body}
 
 const removals = (argv: string[]): string[] => argv.filter(line => line.startsWith('rm '))
 
+// Derived rather than written out: the digest is `containerName`'s business, and pinning its
+// current output here would make a change to the hash look like an ownership regression.
+const REMOVAL = `rm --force --volumes ${containerName('owned', 'suite')}`
+
 describe('container removal ownership', () => {
   it('does not remove a running container this handle only adopted', async () => {
     const argv = await record(FAKE_RUNNING, 'await handle.ready()\nawait handle.remove()')
@@ -84,7 +99,7 @@ describe('container removal ownership', () => {
     const argv = await record(FAKE_ABSENT, 'await handle.ready()\nawait handle.remove()')
 
     expect(argv.some(line => line.startsWith('run '))).toBe(true)
-    expect(removals(argv)).toEqual(['rm --force --volumes suite-owned-865b016c'])
+    expect(removals(argv)).toEqual([REMOVAL])
   })
 
   it('issues nothing for a handle that never acquired a container', async () => {
@@ -101,6 +116,19 @@ describe('container removal ownership', () => {
 
     // The second call has nothing left to own — `remove` clears the latch — so it resolves
     // without reaching the daemon again, which is what makes repeating it safe.
-    expect(removals(argv)).toEqual(['rm --force --volumes suite-owned-865b016c'])
+    expect(removals(argv)).toEqual([REMOVAL])
+  })
+
+  it('waits for a create still in flight and removes what it produced', async () => {
+    const argv = await record(
+      FAKE_SLOW,
+      'const pending = handle.ready()\nawait handle.remove()\nawait pending',
+    )
+
+    // The case the latch exists for: a create this handle started and then abandoned is
+    // exactly the container it is responsible for removing, and deciding ownership before the
+    // acquisition settles would read `undefined` and walk away from a container it made.
+    expect(removals(argv)).toEqual([REMOVAL])
+    expect(argv.findIndex(line => line.startsWith('run '))).toBeLessThan(argv.indexOf(REMOVAL))
   })
 })
