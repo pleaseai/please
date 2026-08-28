@@ -1,0 +1,51 @@
+packages/core/test/sandbox/docker/harness-integration.test.ts
+  s_512bec718b13bc::t_351bcead5e8b10 46
+README.ko.md
+  s_512bec718b13bc::t_c598539472dcc7 131
+  s_512bec718b13bc::t_351bcead5e8b10 73,81-83,125
+README.md
+  s_512bec718b13bc::t_351bcead5e8b10 81,89-91,135
+  s_512bec718b13bc::t_c598539472dcc7 141
+mise.toml
+  s_512bec718b13bc::t_351bcead5e8b10 3
+packages/core/src/index.ts
+  s_512bec718b13bc::t_351bcead5e8b10 2
+package.json
+  s_512bec718b13bc::t_351bcead5e8b10 8
+packages/core/src/sandbox/harness/provider.ts
+  s_512bec718b13bc::t_351bcead5e8b10 28,45
+packages/cli/package.json
+  s_512bec718b13bc::t_c598539472dcc7 2
+packages/core/test/index.test.ts
+  s_512bec718b13bc::t_351bcead5e8b10 3
+docs/dev-tui.md
+  s_512bec718b13bc::t_c598539472dcc7 4,61,64-65
+docs/project-layout.md
+  s_512bec718b13bc::t_351bcead5e8b10 4,8,192
+CLAUDE.md
+  s_512bec718b13bc::t_351bcead5e8b10 9,14
+packages/core/package.json
+  s_512bec718b13bc::t_351bcead5e8b10 2
+packages/core/test/sandbox/harness/provider.test.ts
+  s_512bec718b13bc::t_351bcead5e8b10 35
+packages/core/src/sandbox/docker/index.ts
+  s_512bec718b13bc::t_351bcead5e8b10 2,6
+bun.lock
+  s_512bec718b13bc::t_e4321977baf79b 31,218-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "88978ac5c6e758a334ee8cfd0a7ac213abbe0221",
+  "prompts": {},
+  "sessions": {
+    "s_512bec718b13bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0fb0680-b744-4f6e-82af-422f495c1b93",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
