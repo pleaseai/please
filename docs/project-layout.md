@@ -1,11 +1,11 @@
 # Project layout
 
 > **Status: proposal, not a decision.** No layout below is implemented, no signature is settled, and
-> `@pleaseai/core`'s root export is still empty. This note exists so the layout argument can be had
+> `@pleasedev/core`'s root export is still empty. This note exists so the layout argument can be had
 > against something concrete. Treat every directory below as a candidate.
 >
 > Open questions 1 and 2 are the exception: both have been **answered by measurement**, and the
-> sandbox layer written to answer them is real code (`@pleaseai/core/sandbox`). Everything those
+> sandbox layer written to answer them is real code (`@pleasedev/core/sandbox`). Everything those
 > answers changed is marked below.
 
 The facts this argument rests on are recorded with sources and dates in
@@ -189,7 +189,7 @@ A constraint fell out of the same run, and it is a sandbox obligation rather tha
 bypass route **cannot start as root**. The CLI's gate is
 `getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and the first run died on it
 because `node:22-bookworm` runs as root. A container backend therefore either runs the harness as a
-non-root user or declares `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` now declares it for
+non-root user or declares `IS_SANDBOX=1`, and `@pleasedev/core/sandbox/docker` now declares it for
 every container it creates — `containerEnv`, which the caller's own `env` can override. A container
 *is* a deliberate sandbox, so the claim is true rather than a way around the check, and the probe
 no longer sets it: the run is now also the check that the backend does.

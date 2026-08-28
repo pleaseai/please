@@ -43,7 +43,7 @@ suite('docker backend through the harness provider', () => {
   })
 
   it('names the backend it was built over', () => {
-    expect(provider.providerId).toBe('pleaseai-docker')
+    expect(provider.providerId).toBe('pleasedev-docker')
     expect(provider.specificationVersion).toBe('harness-sandbox-v1')
   })
 

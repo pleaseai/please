@@ -18,7 +18,7 @@
       },
     },
     "packages/core": {
-      "name": "@pleaseai/core",
+      "name": "@pleasedev/core",
       "version": "0.0.0",
       "dependencies": {
         "@ai-sdk/harness": "^1.0.91",
@@ -201,7 +201,7 @@
 
     "@pkgr/core": ["@pkgr/core@0.3.6", "", {}, "sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA=="],
 
-    "@pleaseai/core": ["@pleaseai/core@workspace:packages/core"],
+    "@pleasedev/core": ["@pleasedev/core@workspace:packages/core"],
 
     "@pleaseai/eslint-config": ["@pleaseai/eslint-config@0.0.4", "", { "dependencies": { "@antfu/eslint-config": "^8.0.0", "eslint-plugin-package-json": "^0.91.0" }, "peerDependencies": { "eslint": "^9.10.0 || ^10.0.0" } }, "sha512-FWzFoZfz1Di/BCT+G9HZpyWcOT4L3lcu9jWRfOWTjRsCkEtbUVBbgp9Wa8+C5lumGq5S5ecAKyDbfAb6xd+w0Q=="],
 
