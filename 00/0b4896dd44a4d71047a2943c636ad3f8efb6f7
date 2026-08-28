@@ -1,0 +1,65 @@
+packages/core/src/sandbox/just-bash/process.ts
+  s_82e04306492abb::t_c33ee730376105 1-50,56-203
+  s_82e04306492abb::t_73ba7bef308c5c 51-55
+packages/core/test/sandbox/just-bash/harness-integration.test.ts
+  s_82e04306492abb::t_d120d260dacc11 6
+  s_82e04306492abb::t_57c0b2c7b6db58 21-45
+  s_82e04306492abb::t_2c0332b5f02703 1-5,7-20,46-121
+packages/core/src/sandbox/just-bash/session.ts
+  s_82e04306492abb::t_4705775bbb15ad 1-16,18-28,34-41,43-121
+  s_82e04306492abb::t_03bd6bdbc036a2 17,29-33,42
+packages/core/src/sandbox/just-bash/sandbox.ts
+  s_82e04306492abb::t_c33ee730376105 1-91
+packages/core/test/sandbox/just-bash/backend.test.ts
+  s_82e04306492abb::t_461c33dfc8c7a8 22-23,97,100,102,104,107-129,195,200-205,264-294,347-348
+  s_82e04306492abb::t_4f2dbea8e1dfaf 1-21,24-96,98-99,101,103,105-106,130-194,196-199,206-263,295-346,349-384
+packages/core/src/sandbox/just-bash/env.ts
+  s_82e04306492abb::t_0ebbb690ba5b6c 1-75
+packages/core/src/sandbox/just-bash/files.ts
+  s_82e04306492abb::t_501f51482bac81 12-18,24-52,114-115,119-121
+  s_82e04306492abb::t_4705775bbb15ad 1-11,19-23,53-113,116-118,122-131
+packages/core/package.json
+  s_82e04306492abb::t_d120d260dacc11 59-66
+  s_82e04306492abb::t_003c415620c879 72
+  s_82e04306492abb::t_55f094e05fdb3e 27-31
+packages/core/test/sandbox/just-bash/env.test.ts
+  s_82e04306492abb::t_24863085244f32 1-55
+packages/core/test/sandbox/just-bash/paths.test.ts
+  s_82e04306492abb::t_24863085244f32 1-24
+README.md
+  s_82e04306492abb::t_540935e5a5eacb 93,143
+docs/project-layout.md
+  s_82e04306492abb::t_269087224f9c63 203-208
+packages/core/test/sandbox/contract/errors.test.ts
+  s_82e04306492abb::t_b91cfe20e0c343 11-12,21,25,28,31-32
+packages/core/src/sandbox/just-bash/runtime.ts
+  s_82e04306492abb::t_5b10d1ef57e650 1-40,48-118
+  s_82e04306492abb::t_501f51482bac81 41-47
+packages/core/src/sandbox/just-bash/provider.ts
+  s_82e04306492abb::t_003c415620c879 1-139
+README.ko.md
+  s_82e04306492abb::t_3d2ed3d73a527b 85,133
+packages/core/src/sandbox/just-bash/index.ts
+  s_82e04306492abb::t_003c415620c879 1-13,15-21,29-52
+  s_82e04306492abb::t_73ba7bef308c5c 14,22-28
+packages/core/tsup.config.ts
+  s_82e04306492abb::t_55f094e05fdb3e 10
+bun.lock
+  s_82e04306492abb::t_55d90f74f06a9d 28,61-62,193-202,211-214,217-218,287-290,377-378,387-388,391-392,399-400,421-422,429,457-460,467-468,473-474,483-484,569-570,587-590,597-598,611-612,623-624,643-644,653-654,667-668,695-696,809-810,813-816,819-820,829-830,835-842,853-854,865-866,879-880,903-904,909-910,915-924,945-946,949-950,957-960,963-964,981-984,989-990,995-1000,1007-1010,1021-1022,1033-1034,1037-1038,1045-1046,1081-1082,1087-1088,1149-1150,1153-1154
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "000b4896dd44a4d71047a2943c636ad3f8efb6f7",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
