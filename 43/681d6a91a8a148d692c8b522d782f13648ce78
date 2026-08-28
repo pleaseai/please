@@ -1,0 +1,91 @@
+examples/claude-code-docker/src/workspace/CLAUDE.md
+  s_512bec718b13bc::t_5fcc52d359b461 1-9
+packages/core/test/sandbox/define.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-76
+packages/core/src/sandbox/docker/provider.ts
+  s_512bec718b13bc::t_5fcc52d359b461 11,105-117
+  s_512bec718b13bc::t_0137d281eb7075 118
+examples/README.md
+  s_512bec718b13bc::t_5fcc52d359b461 1-23
+README.md
+  s_512bec718b13bc::t_5fcc52d359b461 30-37,83-84,88-89,96-101,103-105,107-109,140,142-148,152-153,155-156,160-165,181-183
+  s_512bec718b13bc::t_af3cfa18b1ed9a 185-188
+eslint.config.ts
+  s_512bec718b13bc::t_5fcc52d359b461 4-8
+examples/claude-code-docker/package.json
+  s_512bec718b13bc::t_5fcc52d359b461 1-15
+packages/core/src/sandbox/define.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-110
+CLAUDE.md
+  s_512bec718b13bc::t_5fcc52d359b461 7-11,16-19
+examples/claude-code-docker/src/workspace/sum.js
+  s_512bec718b13bc::t_5fcc52d359b461 1-7
+packages/core/package.json
+  s_512bec718b13bc::t_5fcc52d359b461 18-20
+examples/claude-code-docker/src/workspace/.claude/agents/verifier.md
+  s_512bec718b13bc::t_5fcc52d359b461 1-12
+packages/core/src/sandbox/docker/index.ts
+  s_512bec718b13bc::t_5fcc52d359b461 20
+packages/core/test/agent/turn.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-44
+examples/claude-code-docker/index.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-72
+docs/project-layout.md
+  s_512bec718b13bc::t_5fcc52d359b461 3-5,7-12,18,21-39,61,64-65,92-93,97-102,109,111-114,121-122,127-145,163-203,215-229
+packages/core/src/index.ts
+  s_512bec718b13bc::t_5fcc52d359b461 4-7,9-10,13-22
+packages/core/test/agent/workspace.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-123
+packages/core/test/sandbox/docker/provider.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-93
+examples/claude-code-docker/src/agent.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-35
+packages/core/test/index.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 10,13-17
+package.json
+  s_512bec718b13bc::t_5fcc52d359b461 6-7
+examples/claude-code-docker/README.md
+  s_512bec718b13bc::t_5fcc52d359b461 1-101
+examples/claude-code-docker/tsconfig.json
+  s_512bec718b13bc::t_5fcc52d359b461 1-6
+packages/core/src/agent/workspace.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-116
+packages/core/tsup.config.ts
+  s_512bec718b13bc::t_5fcc52d359b461 6
+packages/core/src/sandbox/index.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-18
+packages/core/test/agent/define.test.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-200
+docs/prior-art.md
+  s_512bec718b13bc::t_5fcc52d359b461 13-16,163-167,189-251
+  s_512bec718b13bc::t_9cf25c82db20b3 252
+packages/core/src/agent/define.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-187
+examples/claude-code-docker/src/sandbox.ts
+  s_512bec718b13bc::t_5fcc52d359b461 1-25
+.gitignore
+  s_512bec718b13bc::t_5fcc52d359b461 11
+docs/dev-tui.md
+  s_512bec718b13bc::t_2279aefb130553 6,8-12,90,107-108
+README.ko.md
+  s_512bec718b13bc::t_af3cfa18b1ed9a 174,176
+  s_512bec718b13bc::t_5fcc52d359b461 28-34,75-76,80-81,88-93,95-96,98-99,132-138,142-143,145-146,150-155,171-172
+bun.lock
+  s_512bec718b13bc::t_16e686cd927999 20-27,228-229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "43681d6a91a8a148d692c8b522d782f13648ce78",
+  "prompts": {},
+  "sessions": {
+    "s_512bec718b13bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0fb0680-b744-4f6e-82af-422f495c1b93",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
