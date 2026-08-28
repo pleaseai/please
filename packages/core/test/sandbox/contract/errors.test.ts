@@ -9,7 +9,7 @@
  * exports themselves.
  *
  * Backend subpaths are imported for their *re-export*, not for their implementations; no import
- * reaches a daemon, the filesystem, or the optional `just-bash` peer, so this runs everywhere.
+ * reaches a daemon, the filesystem, or either optional peer, so this runs everywhere.
  */
 import { describe, expect, it } from 'bun:test'
 import {
@@ -20,16 +20,23 @@ import {
 import { SandboxFileNotFoundError as dockerFileNotFound } from '../../../src/sandbox/docker'
 import { SandboxFileNotFoundError as justBashFileNotFound } from '../../../src/sandbox/just-bash'
 import { SandboxFileNotFoundError as localFileNotFound } from '../../../src/sandbox/local'
+import { SandboxFileNotFoundError as microsandboxFileNotFound } from '../../../src/sandbox/microsandbox'
 
 describe('contract error identity', () => {
-  it('gives every backend the same missing-file class, not three of the same name', () => {
+  it('gives every backend the same missing-file class, not four of the same name', () => {
     expect(dockerFileNotFound).toBe(SandboxFileNotFoundError)
     expect(localFileNotFound).toBe(SandboxFileNotFoundError)
     expect(justBashFileNotFound).toBe(SandboxFileNotFoundError)
+    expect(microsandboxFileNotFound).toBe(SandboxFileNotFoundError)
   })
 
   it('lets one catch match a missing file from any backend', () => {
-    for (const Raised of [dockerFileNotFound, localFileNotFound, justBashFileNotFound]) {
+    for (const Raised of [
+      dockerFileNotFound,
+      localFileNotFound,
+      justBashFileNotFound,
+      microsandboxFileNotFound,
+    ]) {
       expect(new Raised('/absent')).toBeInstanceOf(SandboxFileNotFoundError)
     }
   })

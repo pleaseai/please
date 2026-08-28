@@ -200,6 +200,11 @@ it. There the claim would be false, and the root check it defeats is the last th
 a bypassed permission prompt and the developer's own home directory. Isolation is what makes the
 declaration honest, so only the backend that provides isolation makes it.
 
+`@pleaseai/core/sandbox/microsandbox` reads the constraint the same way the Docker backend does and
+declares `IS_SANDBOX=1` for the same reason, with more room to spare: a microVM is a separate
+kernel, so the claim is true by a wider margin than a container's. The caller still wins by passing
+`IS_SANDBOX` in `env`.
+
 `@pleaseai/core/sandbox/just-bash` — a virtual-shell backend added since, over an interpreter with
 its own in-memory filesystem — sits outside this question rather than on either side of it. Its
 isolation is real, but there is no `getuid()` to gate and no `node` to run: its commands are

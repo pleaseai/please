@@ -91,9 +91,18 @@ One layer does exist, because it was the layer the open questions could not be a
 | `@pleaseai/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
 | `@pleaseai/core/sandbox/local` | a host-process backend — no daemon, no image, **and no isolation**. Host-only for the same reason |
 | `@pleaseai/core/sandbox/just-bash` | a virtual-shell backend over [`just-bash`](https://www.npmjs.com/package/just-bash) — no daemon, no image, no host process, and **no real binaries**. `just-bash` is an optional peer dependency |
+| `@pleaseai/core/sandbox/microsandbox` | a microVM backend over [`microsandbox`](https://www.npmjs.com/package/microsandbox) — isolation by hypervisor rather than by namespace. Optional peer dependency; **type-checked but not yet run** (see below) |
 
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
+
+Three of the four backends are covered by suites that run wherever their prerequisite is present —
+`local` and `just-bash` everywhere, `docker` where a daemon is reachable. The **microsandbox**
+backend is the exception and says so rather than implying otherwise: `microsandbox` ships no native
+addon for `darwin-x64`, which is the platform it was written on, so its behavioural suite has never
+been observed to pass. What *is* checked everywhere is that its structural copies of the vendor's
+types still match the vendor's own declarations — `test/sandbox/microsandbox/vendor-shape.test.ts`,
+enforced by `tsc`.
 
 Decided: the scope table above, the name, the license (Apache-2.0), the stack
 ([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)), and the sandbox split
@@ -141,6 +150,7 @@ packages/
       docker/                # local Docker backend (host-only)
       local/                 # host-process backend (host-only, unisolated)
       just-bash/             # virtual-shell backend (no host process, no real binaries)
+      microsandbox/          # microVM backend (host-only, hypervisor-isolated)
     scripts/                 # probes that measure the runtime rather than assume it
 docs/
   prior-art.md               # what eve, flue and the AI SDK harnesses already do

@@ -83,9 +83,17 @@
 | `@pleaseai/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
 | `@pleaseai/core/sandbox/local` | 호스트 프로세스 백엔드 — 데몬도 이미지도, **격리도 없다**. 같은 이유로 호스트 전용 |
 | `@pleaseai/core/sandbox/just-bash` | [`just-bash`](https://www.npmjs.com/package/just-bash) 위의 가상 셸 백엔드 — 데몬도 이미지도 호스트 프로세스도 없고, **실제 바이너리도 없다**. `just-bash` 는 선택적 peer 의존성 |
+| `@pleaseai/core/sandbox/microsandbox` | [`microsandbox`](https://www.npmjs.com/package/microsandbox) 위의 microVM 백엔드 — 네임스페이스가 아니라 하이퍼바이저로 격리한다. 선택적 peer 의존성이며, **타입 검사만 되었고 아직 실행되지 않았다** (아래 참조) |
 
 하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
 호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
+
+네 백엔드 중 셋은 전제 조건이 갖춰진 곳에서 실제로 도는 스위트를 갖고 있다 — `local` 과 `just-bash`
+는 어디서나, `docker` 는 데몬에 닿을 수 있는 곳에서. **microsandbox** 는 예외이고, 그 사실을 감추지
+않는다: `microsandbox` 는 이 백엔드가 작성된 플랫폼인 `darwin-x64` 용 네이티브 애드온을 제공하지
+않아서, 동작 스위트가 통과하는 것을 아직 한 번도 관측하지 못했다. 어디서나 검사되는 것은 벤더 타입의
+구조적 사본이 벤더의 선언과 여전히 일치하는지다 — `test/sandbox/microsandbox/vendor-shape.test.ts`,
+`tsc` 가 강제한다.
 
 정해진 것: 위 범위 표, 이름, 라이선스(Apache-2.0), 스택([Bun](https://bun.sh), TypeScript,
 [Turborepo](https://turborepo.com)), 그리고 위의 샌드박스 분리.
@@ -131,6 +139,7 @@ packages/
       docker/                # 로컬 Docker 백엔드 (호스트 전용)
       local/                 # 호스트 프로세스 백엔드 (호스트 전용, 격리 없음)
       just-bash/             # 가상 셸 백엔드 (호스트 프로세스 없음, 실제 바이너리 없음)
+      microsandbox/          # microVM 백엔드 (호스트 전용, 하이퍼바이저 격리)
     scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
 docs/
   prior-art.md               # eve, flue, AI SDK 하네스가 이미 하고 있는 것
