@@ -1,8 +1,11 @@
 /**
  * The palette, and the pieces of chrome drawn with it.
  *
- * Colour is resolved once at construction rather than per call, so a run piped to a file or
- * a CI log prints the same text without escapes rather than the same text with them.
+ * Colour is resolved once at construction rather than per call, so a single run never
+ * switches halfway through. *Whether* it is on is picocolors' decision rather than this
+ * module's: `NO_COLOR`, `--no-color` and `TERM=dumb` turn it off; `FORCE_COLOR` and `CI`
+ * turn it on with no terminal in sight; a plain pipe leaves it off. A caller that needs a
+ * definite answer passes `color`, which is what the tests do.
  *
  * Derived from vercel/eve `packages/eve/src/cli/ui/output.ts` (Apache-2.0) — see NOTICE.
  */
