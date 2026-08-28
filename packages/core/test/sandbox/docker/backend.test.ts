@@ -14,7 +14,11 @@ import type { ProcessLogEvent, SandboxProvider } from '../../../src/sandbox/cont
  */
 import { Buffer } from 'node:buffer'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
-import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../../../src/sandbox/contract'
+import {
+  SandboxFileNotFoundError,
+  SandboxNoExitRecordError,
+  SandboxWaitTimeoutError,
+} from '../../../src/sandbox/contract'
 import { createDockerSandbox, isDockerAvailable } from '../../../src/sandbox/docker'
 import { IMAGE_PULL_TIMEOUT_MS, pullSandboxImage, SANDBOX_IMAGE } from './image.fixtures'
 
@@ -107,7 +111,9 @@ suite('docker sandbox backend', () => {
   it('rejects a read of a path that does not exist', async () => {
     const session = sandboxes.session(sandboxId)
 
-    await expect(session.readFile(`${WORK_DIR}/absent`)).rejects.toThrow()
+    await expect(session.readFile(`${WORK_DIR}/absent`))
+      .rejects
+      .toBeInstanceOf(SandboxFileNotFoundError)
   })
 
   it('reports a missing path as absent rather than throwing', async () => {

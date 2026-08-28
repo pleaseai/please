@@ -89,6 +89,9 @@ and it runs — [`examples/claude-code-docker`](examples/claude-code-docker) dri
 | `@pleasedev/core/sandbox` | `defineSandbox`, plus the backend contract — vendor-neutral types |
 | `@pleasedev/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
 | `@pleasedev/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
+| `@pleasedev/core/sandbox/local` | a host-process backend — no daemon, no image, **and no isolation**. Host-only for the same reason |
+| `@pleasedev/core/sandbox/just-bash` | a virtual-shell backend over [`just-bash`](https://www.npmjs.com/package/just-bash) — no daemon, no image, no host process, and **no real binaries**. `just-bash` is an optional peer dependency |
+| `@pleasedev/core/sandbox/microsandbox` | a microVM backend over [`microsandbox`](https://www.npmjs.com/package/microsandbox) — isolation by hypervisor rather than by namespace. Optional peer dependency; **type-checked but not yet run** (see below) |
 
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
@@ -98,6 +101,16 @@ Two shapes are the argument rather than the API. The **harness adapter is never 
 because that boundary is the AI SDK's and a wrapper here would only be an obligation to chase it.
 And **`workspace` is a declared input**, because no adapter exposes `agents`, `skills` or
 `settingSources` — a directory is the only route those have into a run.
+
+Three of the four backends are covered by suites that run wherever their prerequisite is present —
+`local` and `just-bash` everywhere, `docker` where a daemon is reachable. The **microsandbox**
+backend is the exception and says so rather than implying otherwise: `microsandbox` ships no native
+addon for `darwin-x64`, which is the platform it was written on, and on the Linux CI runner the
+addon loads but the guest dies before its agent relay comes up, for want of a hypervisor. So its
+behavioural suite has never been observed to pass, and its gate is a throwaway boot rather than an
+import check, so that neither host reports a green suite it never ran. What *is* checked everywhere
+is that its structural copies of the vendor's types still match the vendor's own declarations —
+`test/sandbox/microsandbox/vendor-shape.test.ts`, enforced by `tsc`.
 
 Decided: the scope table above, the name, the license (Apache-2.0), the stack
 ([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)), the sandbox split, and the
@@ -146,6 +159,9 @@ packages/
         contract/            # the backend contract
         harness/             # HarnessV1SandboxProvider over that contract
         docker/              # local Docker backend (host-only)
+        local/               # host-process backend (host-only, unisolated)
+        just-bash/           # virtual-shell backend (no host process, no real binaries)
+        microsandbox/        # microVM backend (host-only, hypervisor-isolated)
     scripts/                 # probes that measure the runtime rather than assume it
   cli/                       # @pleasedev/cli — unreleased; has no command yet
     src/ui/                  # the boot chrome `please dev` draws before the session starts

@@ -128,7 +128,7 @@ export interface WaitForExitOptions {
 /**
  * The wait ended before the process did.
  *
- * The one runtime value this package exports, deliberately: a caller that must distinguish
+ * A runtime value rather than a type, deliberately: a caller that must distinguish
  * "still running, I stopped watching" from "the RPC failed" needs a shared identity to test
  * against, and a string-matched message is not one.
  */
@@ -228,6 +228,32 @@ export interface SandboxFileContent {
 }
 
 /**
+ * A read named a path the sandbox does not have.
+ *
+ * On the contract rather than in each backend, for the reason {@link SandboxWaitTimeoutError}
+ * gives: a caller that must tell "the file is not there" from "the read failed" needs a shared
+ * identity to test against, and two classes of the same name in two backends are not one —
+ * `instanceof` would answer no across them, and a `name` comparison is a string match wearing a
+ * type's clothes. A backend SHOULD raise this where it applies.
+ *
+ * **It is not a promise about the moment after it is raised.** Absence is observed, not held:
+ * the path may be created a microsecond later, and a read that succeeded may name a path
+ * already gone. A caller that needs absence as a value rather than a rejection pairs the read
+ * with {@link SandboxSession.exists} and treats the pair as advisory — which is what
+ * `../harness/files.ts` does, and why it re-checks rather than trusting either call alone.
+ */
+export class SandboxFileNotFoundError extends Error {
+  /** The path as the caller named it, not as the backend resolved it. */
+  readonly path: string
+
+  constructor(path: string) {
+    super(`file '${path}' does not exist in the sandbox`)
+    this.name = 'SandboxFileNotFoundError'
+    this.path = path
+  }
+}
+
+/**
  * Reading and writing files in the sandbox.
  *
  * Split out because it arrived for one caller — the AI SDK harness session, whose
@@ -240,7 +266,17 @@ export interface SandboxFileContent {
  * harness provider — written once, over the contract, for every backend at once.
  */
 export interface SandboxFiles {
-  /** Rejects when the path does not exist; callers wanting absence-as-value pair it with `exists`. */
+  /**
+   * Rejects when the path does not exist; callers wanting absence-as-value pair it with
+   * `exists`.
+   *
+   * A backend SHOULD reject with {@link SandboxFileNotFoundError}, and both backends here do —
+   * but the promise is the rejection, not its type. A vendor client satisfies this contract
+   * structurally and throws whatever it throws, so a caller that must handle every backend
+   * cannot switch on the class alone. That is why `../harness/files.ts` decides absence by
+   * re-checking `exists` rather than by matching an error, and why its note saying so is not in
+   * conflict with the class being named here.
+   */
   readFile: ((path: string, options: { encoding: 'none' }) => Promise<SandboxFileStream>)
     & ((path: string, options?: { encoding?: SandboxFileEncoding }) => Promise<SandboxFileContent>)
   writeFile: (

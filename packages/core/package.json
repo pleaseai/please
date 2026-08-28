@@ -24,6 +24,21 @@
       "types": "./dist/sandbox/harness/index.d.ts",
       "import": "./dist/sandbox/harness/index.js"
     },
+    "./sandbox/just-bash": {
+      "bun": "./src/sandbox/just-bash/index.ts",
+      "types": "./dist/sandbox/just-bash/index.d.ts",
+      "import": "./dist/sandbox/just-bash/index.js"
+    },
+    "./sandbox/microsandbox": {
+      "bun": "./src/sandbox/microsandbox/index.ts",
+      "types": "./dist/sandbox/microsandbox/index.d.ts",
+      "import": "./dist/sandbox/microsandbox/index.js"
+    },
+    "./sandbox/local": {
+      "bun": "./src/sandbox/local/index.ts",
+      "types": "./dist/sandbox/local/index.d.ts",
+      "import": "./dist/sandbox/local/index.js"
+    },
     "./sandbox/docker": {
       "bun": "./src/sandbox/docker/index.ts",
       "types": "./dist/sandbox/docker/index.d.ts",
@@ -46,11 +61,25 @@
     "clean": "rm -rf dist .turbo",
     "type-check": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "just-bash": "^3",
+    "microsandbox": "^0.6.15"
+  },
+  "peerDependenciesMeta": {
+    "just-bash": {
+      "optional": true
+    },
+    "microsandbox": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@ai-sdk/harness": "^1.0.91"
   },
   "devDependencies": {
     "@ai-sdk/harness-claude-code": "^1.0.94",
+    "just-bash": "^3.4.2",
+    "microsandbox": "^0.6.15",
     "tsup": "^8",
     "typescript": "^6"
   }
