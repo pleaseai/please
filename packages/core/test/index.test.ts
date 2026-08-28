@@ -7,11 +7,13 @@ describe('@pleaseai/core', () => {
     expect(mod).toBeDefined()
   })
 
-  it('exposes no public API yet', async () => {
+  it('pins the exported surface', async () => {
     const mod = await import('../src/index')
 
-    // The framework surface is undesigned. Adding an export is a deliberate
-    // design decision — update this test in the same change that makes it.
-    expect(Object.keys(mod)).toEqual([])
+    // This list was empty on purpose while the framework surface was undesigned. It is no
+    // longer: `defineAgent` and the workspace helpers are a decision, not an accident. The
+    // test still exists for the same reason it did then — an export appearing here without a
+    // decision behind it should fail the suite.
+    expect(Object.keys(mod).sort()).toEqual(['defineAgent', 'readWorkspace', 'seedWorkspace'])
   })
 })
