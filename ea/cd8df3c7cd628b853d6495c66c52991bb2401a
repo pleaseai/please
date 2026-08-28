@@ -1,0 +1,34 @@
+packages/core/src/agent/define.ts
+  s_bdd4816c96dae9::t_f9b78d4c773d8c 136-139,160-165
+packages/core/src/sandbox/define.ts
+  s_bdd4816c96dae9::t_f9b78d4c773d8c 98-108
+examples/claude-code-docker/index.ts
+  s_bdd4816c96dae9::t_f9b78d4c773d8c 25
+packages/core/src/agent/workspace.ts
+  s_bdd4816c96dae9::t_f9b78d4c773d8c 63,66,69-71,76,105-110
+packages/core/test/agent/workspace.test.ts
+  s_bdd4816c96dae9::t_006aa5253bf0b7 37-46,86-93,96-122
+  s_bdd4816c96dae9::t_4346a736a4c6bf 94-95
+packages/core/test/sandbox/define.test.ts
+  s_bdd4816c96dae9::t_a998f1187a8164 55-75
+examples/claude-code-docker/README.md
+  s_bdd4816c96dae9::t_f9b78d4c773d8c 12-15
+packages/core/test/agent/define.test.ts
+  s_bdd4816c96dae9::t_4bc9c597954eea 152-165
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "eacd8df3c7cd628b853d6495c66c52991bb2401a",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
