@@ -1,0 +1,129 @@
+docs/dev-tui.md
+  s_82e04306492abb::t_53f8125b2e8e51 1-176
+packages/core/src/agent/workspace.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-116
+.gitignore
+  s_82e04306492abb::t_53f8125b2e8e51 11
+examples/claude-code-docker/tsconfig.json
+  s_82e04306492abb::t_53f8125b2e8e51 1-6
+packages/cli/src/ui/boot-row.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-204
+CLAUDE.md
+  s_82e04306492abb::t_53f8125b2e8e51 7-11,16-19
+packages/core/package.json
+  s_82e04306492abb::t_53f8125b2e8e51 18-20
+packages/core/test/sandbox/define.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-76
+sonar-project.properties
+  s_82e04306492abb::t_53f8125b2e8e51 10-11,13-14
+packages/cli/test/ui/progress-pulse.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-68
+packages/cli/test/ui/sanitize.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-75
+packages/core/src/sandbox/docker/provider.ts
+  s_82e04306492abb::t_53f8125b2e8e51 11,105-117
+  s_82e04306492abb::t_09f07e0213da85 118
+packages/cli/package.json
+  s_82e04306492abb::t_53f8125b2e8e51 1-23
+packages/core/test/sandbox/docker/provider.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-93
+packages/cli/src/ui/progress-pulse.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-66
+packages/cli/tsconfig.json
+  s_82e04306492abb::t_53f8125b2e8e51 1-7
+examples/claude-code-docker/index.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-72
+examples/claude-code-docker/src/agent.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-35
+examples/claude-code-docker/src/workspace/.claude/agents/verifier.md
+  s_82e04306492abb::t_53f8125b2e8e51 1-12
+NOTICE
+  s_82e04306492abb::t_53f8125b2e8e51 22-32
+packages/cli/src/ui/text.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-187
+packages/cli/test/ui/live-region.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-103
+README.md
+  s_82e04306492abb::t_01517ee7f390a3 99-104,111-113,162-164
+  s_82e04306492abb::t_53f8125b2e8e51 30-37,83-84,88-89,116-118,120-122,153,155-161,166-169,171-179,197-204
+package.json
+  s_82e04306492abb::t_53f8125b2e8e51 6-7
+eslint.config.ts
+  s_82e04306492abb::t_53f8125b2e8e51 4-8
+packages/cli/src/ui/ansi.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-32
+packages/core/src/sandbox/docker/index.ts
+  s_82e04306492abb::t_53f8125b2e8e51 23
+examples/claude-code-docker/src/workspace/CLAUDE.md
+  s_82e04306492abb::t_53f8125b2e8e51 1-9
+docs/project-layout.md
+  s_82e04306492abb::t_53f8125b2e8e51 3-5,7-12,18,21-39,61,64-65,92-93,97-102,109,111-114,121-122,127-145,163-203,215-229
+packages/cli/src/ui/live-region.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-95
+packages/cli/test/ui/boot-row.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-164
+packages/cli/src/ui/index.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-42
+packages/core/src/index.ts
+  s_82e04306492abb::t_53f8125b2e8e51 4-7,9-10,13-22
+examples/claude-code-docker/README.md
+  s_82e04306492abb::t_53f8125b2e8e51 1-101
+packages/core/src/sandbox/index.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-18
+packages/core/src/sandbox/define.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-110
+packages/core/test/agent/turn.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-44
+packages/core/test/agent/workspace.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-123
+packages/core/src/agent/define.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-187
+packages/core/test/agent/define.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-200
+packages/cli/src/ui/sanitize.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-189
+packages/cli/src/ui/theme.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-146
+examples/claude-code-docker/src/sandbox.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-25
+examples/claude-code-docker/package.json
+  s_82e04306492abb::t_53f8125b2e8e51 1-15
+.github/workflows/ci.yml
+  s_82e04306492abb::t_53f8125b2e8e51 49-50,52-57,64,67,72,76
+docs/prior-art.md
+  s_82e04306492abb::t_53f8125b2e8e51 13-16,163-167,189-251
+  s_82e04306492abb::t_8217c774f1098a 252
+packages/cli/test/ui/text.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-79
+README.ko.md
+  s_82e04306492abb::t_53f8125b2e8e51 28-34,75-76,80-81,107-108,110-111,144-150,155-158,160-168,186-191
+  s_82e04306492abb::t_ebda7111c857b5 91-96,103-104,151-153
+packages/cli/test/ui/theme.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 1-130
+examples/claude-code-docker/src/workspace/sum.js
+  s_82e04306492abb::t_53f8125b2e8e51 1-7
+packages/core/tsup.config.ts
+  s_82e04306492abb::t_53f8125b2e8e51 6
+packages/core/test/index.test.ts
+  s_82e04306492abb::t_53f8125b2e8e51 10,13-17
+examples/README.md
+  s_82e04306492abb::t_53f8125b2e8e51 1-23
+bun.lock
+  s_82e04306492abb::t_d7b05c4aa177b1 20-37,53,250-253,256
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f6b194681bf1b5e65cc08c993bb613cb81d447c4",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
