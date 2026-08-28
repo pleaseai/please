@@ -4,9 +4,9 @@
 > `@pleaseai/core`'s root export is still empty. This note exists so the layout argument can be had
 > against something concrete. Treat every directory below as a candidate.
 >
-> Open question 1 is the exception: it has been **answered by measurement**, and the sandbox layer
-> written to answer it is real code (`@pleaseai/core/sandbox`). Everything the answer changed is
-> marked below.
+> Open questions 1 and 2 are the exception: both have been **answered by measurement**, and the
+> sandbox layer written to answer them is real code (`@pleaseai/core/sandbox`). Everything those
+> answers changed is marked below.
 
 The facts this argument rests on are recorded with sources and dates in
 [`prior-art.md`](./prior-art.md). Where the two disagree, `prior-art.md` is the record and this note
@@ -49,7 +49,7 @@ contract as documented, that splits:
 | Session and resume (`detach()` / `stop()` → `sessionId` + `resumeFrom`) | comes along |
 | Durable workflow stepping (`@ai-sdk/workflow-harness`) | comes along |
 | Skills | rebuilt as inline objects, or seeded as a directory — see open question 1 |
-| Permission model | flattens to `allow-all` / `allow-edits` / `allow-reads` |
+| Permission model | three modes, but a seeded `.claude/settings.json` `deny` rule outranks all three — measured |
 | Hooks | absent from the adapter's settings, but a seeded `.claude/settings.json` runs them — measured |
 | Plugins, slash commands, subagents | absent from the adapter's settings; same directory as hooks, so likely reachable, unmeasured |
 
@@ -66,8 +66,9 @@ own `.claude/` is read at startup. A probe confirmed it: see below.
 This does not sink the premise — the parts that carry the most weight day to day, the tool set and
 the session story, do come along. The README's claim has been narrowed to that set and now names
 what does not follow. Some of the rest turned out to be winnable through the workspace rather than
-through configuration, which is what open question 1 settled; open question 2 is what the answer
-left conflicting.
+through configuration, which is what open question 1 settled. The conflict it left behind —
+permissions described in two places at once — is open question 2, and that is measured now too:
+the seeded file wins.
 
 ## Three routes, three lifetimes
 
@@ -145,11 +146,45 @@ were not. And the adapter writes its own inline `skills` to `$HOME/.claude/skill
 and queries with `skills: 'all'`, so a seeded project-level directory and the `skills` option would
 be two sources for one thing — which is open question 2's problem, arriving a second time.
 
-**2. Where do permissions come from?** This was a question about whether a seeded settings file
-would be read; the answer to question 1 makes it a real conflict rather than a hypothetical one.
-`permissionMode`'s three values and a seeded `.claude/settings.json` now demonstrably describe the
-same thing twice. One of them has to win, and the answer decides whether the permission model can be
-claimed as the harness's at all or stays something we flatten.
+**2. Where do permissions come from? — ANSWERED: the settings file wins (2026-08-28).**
+`permissionMode`'s three values and a seeded `.claude/settings.json` describe the same thing twice,
+and question 1's answer made that a real conflict rather than a hypothetical one. The conflict is
+now resolved by measurement: `packages/core/scripts/probe-permissions.ts` seeds
+`{"permissions": {"deny": ["Bash", "Bash(*)"]}}` into the session workdir and asks the agent to run
+`uname -r > marker` with the bash tool.
+
+The rule is a `deny` on purpose. An `ask` cannot be read from outside — the adapter's `canUseTool`
+auto-approves anything `allow-all` does not hold back, so an honoured `ask` and an ignored one look
+identical. A `deny` has only two outcomes, and the marker's *content* separates them: it has to
+carry the container's own `uname -r`, which the model cannot produce without executing something,
+so a file written by any other tool is not counted.
+
+`permissionMode` reaches the SDK by two different routes, so both were measured
+(`@ai-sdk/harness-claude-code@1.0.94`, `src/bridge/index.ts:139-234`):
+
+| Case | What the adapter sends | Seeded `deny` |
+| --- | --- | --- |
+| control — no rule seeded | `bypassPermissions` + `allowDangerouslySkipPermissions` | bash ran, marker matched |
+| `allow-all`, every tool active | `bypassPermissions` + `allowDangerouslySkipPermissions`, **no** `settings` | **bound** |
+| `allow-all`, one tool inactive | `permissionMode: 'default'` + an adapter-built `settings` object | **bound** |
+
+So a seeded file is not a second opinion the adapter can overrule — it outranks `permissionMode` on
+both routes, including the one that asks the SDK to skip permissions entirely. And it does not
+merely gate the call: the agent reported `No such tool available: Bash`, so a tool-wide `deny`
+removes the tool from the set rather than denying its use.
+
+Two consequences for this layout. The permission model is **not** something this framework flattens
+to three modes — `permissionMode` is a floor, and anything seeded under `workspace/` can lower it,
+which puts permissions on the same route as `CLAUDE.md` and hooks rather than in adapter settings.
+And the framework cannot claim `permissionMode` describes what an agent may do, because a workspace
+it did not write can contradict it.
+
+A constraint fell out of the same run, and it is a sandbox obligation rather than a layout one: the
+bypass route **cannot start as root**. The CLI's gate is
+`getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and the first run died on it
+because `node:22-bookworm` runs as root — so a container backend either runs the harness as a
+non-root user or sets `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` currently does neither on
+its own.
 
 **3. How does `host-tools/` behave across both targets?** A Worker has a per-invocation CPU limit; a
 Node deployment has a real filesystem and owns its own restart reconciliation. The README says this

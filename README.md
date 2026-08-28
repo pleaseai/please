@@ -28,10 +28,12 @@ Two things follow from reusing the harness instead:
   hand-rolled loop against the Messages API bills per token for the same work.
 
 What does *not* come along is on the record too: skills have to be handed over as inline objects
-rather than read from a directory, and the permission model flattens to three modes. Hooks are the
-interesting case — they are absent from the adapter's *settings*, but a `.claude/settings.json`
-seeded into the session workdir is read and a hook declared there runs, which a live probe
-measured. See [`docs/project-layout.md`](docs/project-layout.md).
+rather than read from a directory. The adapter's *settings* also carry no hooks and only three
+permission modes — but the settings are not the only way in. A `.claude/settings.json` seeded into
+the session workdir is read, and live probes measured both consequences: a hook declared there
+runs, and a `deny` rule there overrides the adapter's permission mode, including the mode that asks
+the runtime to skip permission checks altogether. See
+[`docs/project-layout.md`](docs/project-layout.md).
 
 The harness boundary itself is not ours either — it is the AI SDK's
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent) and
@@ -141,12 +143,13 @@ docs/
   project-layout.md          # a proposed layout, and the open questions it waits on
 ```
 
-The two probes under `packages/core/scripts/` are runnable, and each answers a question the docs
+The three probes under `packages/core/scripts/` are runnable, and each answers a question the docs
 would otherwise have to guess at:
 
 ```bash
 bun run packages/core/scripts/probe-adapter-bootstrap.ts  # no credentials needed
 bun run packages/core/scripts/probe-claude-dir.ts         # needs an Anthropic credential
+bun run packages/core/scripts/probe-permissions.ts        # needs an Anthropic credential
 ```
 
 ## Prior art

@@ -25,10 +25,11 @@
 - **청구서를 결정한다.** Claude Code를 하네스로 구동하면 Claude Code 구독으로 돈다. 직접 만든 루프를
   Messages API에 물리면 같은 일을 토큰 단위로 청구한다.
 
-딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 디렉터리에서 읽히는 대신 인라인 객체로 넘겨야 하고,
-권한 모델은 세 가지 모드로 납작해진다. 훅은 흥미로운 경우다 — 어댑터 *설정*에는 없지만, 세션 작업
-디렉터리에 심은 `.claude/settings.json`은 실제로 읽히고 거기 선언한 훅은 실행된다. 실행 프로브로
-측정한 결과다. [`docs/project-layout.md`](docs/project-layout.md) 참고.
+딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 디렉터리에서 읽히는 대신 인라인 객체로 넘겨야 한다.
+어댑터 *설정*에는 훅이 없고 권한 모드도 셋뿐이다 — 다만 설정만이 들어가는 길은 아니다. 세션 작업
+디렉터리에 심은 `.claude/settings.json`은 실제로 읽히고, 실행 프로브가 그 두 가지 결과를 측정했다.
+거기 선언한 훅은 실행되고, 거기 쓴 `deny` 규칙은 어댑터의 권한 모드를 덮어쓴다 — 런타임에 권한 검사를
+아예 건너뛰라고 요청하는 모드까지 포함해서다. [`docs/project-layout.md`](docs/project-layout.md) 참고.
 
 하네스 경계 자체도 우리 것이 아니다 — AI SDK의
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent)와
@@ -132,12 +133,13 @@ docs/
   project-layout.md          # 레이아웃 제안과, 그것이 기다리는 열린 질문들
 ```
 
-`packages/core/scripts/` 아래 두 프로브는 실행할 수 있고, 각각 문서가 아니면 추측에 그쳤을 질문에
+`packages/core/scripts/` 아래 세 프로브는 실행할 수 있고, 각각 문서가 아니면 추측에 그쳤을 질문에
 답한다.
 
 ```bash
 bun run packages/core/scripts/probe-adapter-bootstrap.ts  # 자격 증명 불필요
 bun run packages/core/scripts/probe-claude-dir.ts         # Anthropic 자격 증명 필요
+bun run packages/core/scripts/probe-permissions.ts        # Anthropic 자격 증명 필요
 ```
 
 ## 선행 사례
