@@ -63,7 +63,7 @@
   },
   "peerDependencies": {
     "just-bash": "^3",
-    "microsandbox": ""
+    "microsandbox": "^0.6.15"
   },
   "peerDependenciesMeta": {
     "just-bash": {

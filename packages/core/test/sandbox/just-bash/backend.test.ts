@@ -12,6 +12,7 @@
  */
 import type { ProcessLogEvent, SandboxProvider } from '../../../src/sandbox/contract'
 import { Buffer } from 'node:buffer'
+import { join } from 'node:path'
 import { describe, expect, it } from 'bun:test'
 import {
   SandboxFileNotFoundError,
@@ -188,6 +189,20 @@ describe('just-bash sandbox backend', () => {
     expect((await drain(await recovered!.logs({ replay: true }))).stdout.trim()).toBe('durable')
   })
 
+  it('reads a process back through a second session over the same sandbox id', async () => {
+    const { sandboxes, sandboxId } = freshSandbox()
+
+    // `SandboxProvider.session` is called per use rather than held across a workflow step, so a
+    // registry owned by one session object would answer `null` for every process the previous
+    // call started.
+    const proc = await sandboxes.session(sandboxId).exec(['sh', '-c', 'echo across sessions'])
+    await proc.waitForExit()
+
+    expect(await sandboxes.session(sandboxId).getProcess(proc.id)).not.toBeNull()
+    expect((await sandboxes.session(sandboxId).listProcesses()).map(entry => entry.id))
+      .toContain(proc.id)
+  })
+
   it('resumes from a cursor rather than replaying what the caller already folded in', async () => {
     const { sandboxes, sandboxId } = freshSandbox()
     const session = sandboxes.session(sandboxId)
@@ -313,6 +328,41 @@ describe('just-bash sandbox backend', () => {
 
     expect(exit.timedOut).toBe(true)
   })
+
+  it('does not mark a command that finished inside its budget as timed out', async () => {
+    const { sandboxes, sandboxId } = freshSandbox()
+    const session = sandboxes.session(sandboxId)
+
+    // Read after the budget has elapsed, and without a `waitForExit` to stand the timer down:
+    // `timedOut` must still describe the process, not the timer that outlived it.
+    const proc = await session.exec(['sh', '-c', 'echo quick'], { timeout: 200 })
+    await Bun.sleep(500)
+    const status = await proc.status()
+
+    expect(status.state).toBe('exited')
+    expect(status.state === 'exited' && status.exit.timedOut).toBe(false)
+  })
+
+  it('does not keep the host process alive for a budget nothing is waiting on', async () => {
+    // Asserted from outside, because the claim is about the event loop rather than a value: a
+    // referenced timer would hold the whole process open. Measured before the fix at the full
+    // 30s; an agent turn's budget is hours, and every one of them would be spent idling after
+    // the work was done.
+    const script = `
+      import { createJustBashSandbox } from './src/sandbox/just-bash'
+      await createJustBashSandbox().session('t').exec(['sh', '-c', 'echo hi'], { timeout: 30_000 })
+    `
+    const child = Bun.spawn(['bun', '-e', script], {
+      cwd: join(import.meta.dir, '..', '..', '..'),
+      stdout: 'ignore',
+      stderr: 'pipe',
+    })
+    const startedAt = Date.now()
+    const code = await child.exited
+
+    expect(code).toBe(0)
+    expect(Date.now() - startedAt).toBeLessThan(10_000)
+  }, 30_000)
 
   it('does not mark a command that returns 124 by itself as timed out', async () => {
     const { sandboxes, sandboxId } = freshSandbox()

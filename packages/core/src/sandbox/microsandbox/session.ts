@@ -78,6 +78,23 @@ async function abandonStartedProcess(
 }
 
 /**
+ * Launch a script without waiting for what it started.
+ *
+ * The vendor has no detached exec: `execWith` resolves only once the command it ran has finished,
+ * and `execStreamWith`'s handle is tied to this host process. `../docker` gets this from
+ * `docker exec --detach`; here the backgrounding has to happen inside the guest instead. Awaiting
+ * the wrapper directly would make `exec()` return only when the process it is supposed to hand
+ * back a live handle to has already exited — a six-hour turn would block the caller for six hours.
+ *
+ * The launching shell exits at once; the wrapper survives it because `journalledCommand` runs its
+ * inner shell under `setsid`, in a session of its own. Its streams are detached from this exec's
+ * for the same reason — the journal is where the command's own output goes.
+ */
+function detachedLaunch(script: string): string {
+  return `sh -c ${quoteArg(script)} </dev/null >/dev/null 2>&1 &\nexit 0`
+}
+
+/**
  * Start one command.
  *
  * The wrapper is launched **without a per-exec timeout**, even when the caller asked for one. The
@@ -108,7 +125,7 @@ async function exec(
     meta,
     ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
   })
-  const started = await execScript(sandbox, script, {
+  const started = await execScript(sandbox, detachedLaunch(script), {
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     ...(options.env === undefined ? {} : { env: options.env }),
   })

@@ -29,6 +29,7 @@ import type {
   SandboxProvider,
   SandboxSession,
 } from '../contract'
+import type { ProcessRecord } from './process'
 import type { JustBashHandle } from './sandbox'
 import { createJustBashHandle } from './sandbox'
 import { createJustBashSession } from './session'
@@ -86,6 +87,9 @@ export interface JustBashSandboxOptions {
 
 export function createJustBashSandbox(options: JustBashSandboxOptions = {}): SandboxProvider {
   const handles = new Map<string, JustBashHandle>()
+  // Beside the handle rather than inside the session, because `session()` is called per use: a
+  // registry created per session object would lose every process the previous call started.
+  const registries = new Map<string, Map<string, ProcessRecord>>()
 
   // Cached per sandbox id: `session()` is called per use rather than held, and a fresh handle
   // each time would defeat the lazy acquisition behind it — and, here, would silently hand back
@@ -105,6 +109,16 @@ export function createJustBashSandbox(options: JustBashSandboxOptions = {}): San
     return created
   }
 
+  const registryFor = (sandboxId: string): Map<string, ProcessRecord> => {
+    const existing = registries.get(sandboxId)
+    if (existing !== undefined) {
+      return existing
+    }
+    const created = new Map<string, ProcessRecord>()
+    registries.set(sandboxId, created)
+    return created
+  }
+
   const portEndpoint = async (
     _sandboxId: string,
     port: number,
@@ -115,7 +129,7 @@ export function createJustBashSandbox(options: JustBashSandboxOptions = {}): San
 
   const session = (sandboxId: string): SandboxSession => {
     const handle = handleFor(sandboxId)
-    const created = createJustBashSession({ handle })
+    const created = createJustBashSession({ handle, processes: registryFor(sandboxId) })
     return {
       ...created,
       destroy: async () => {
@@ -125,6 +139,7 @@ export function createJustBashSandbox(options: JustBashSandboxOptions = {}): San
         finally {
           if (handles.get(sandboxId) === handle) {
             handles.delete(sandboxId)
+            registries.delete(sandboxId)
           }
         }
       },
