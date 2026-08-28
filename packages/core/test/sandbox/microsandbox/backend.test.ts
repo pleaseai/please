@@ -45,14 +45,33 @@ const WORK_DIR = '/work'
 const BOOT_TIMEOUT_MS = 300_000
 
 /**
+ * Run something under a deadline, answering `undefined` when it runs out.
+ *
+ * The probe below is a top-level `await`, which is outside every per-test budget bun applies —
+ * so a boot that *hangs* rather than failing, a stalled pull or a hypervisor that deadlocks
+ * instead of aborting, would hang the whole file with no test to attribute it to. Every other
+ * boot in this file is already given `BOOT_TIMEOUT_MS`; this is how the probe gets the same.
+ *
+ * The timer is unreferenced so that winning the race does not leave five minutes of pending work
+ * holding the process open.
+ */
+async function withBudget<T>(work: Promise<T>, budgetMs: number): Promise<T | undefined> {
+  const expiry = new Promise<undefined>((resolve) => {
+    const timer = setTimeout(resolve, budgetMs, undefined)
+    timer.unref()
+  })
+  return Promise.race([work, expiry])
+}
+
+/**
  * Whether this host can boot a microVM, asked by booting one.
  *
  * The import check comes first because it is free and is the whole answer on a platform with no
  * native addon. Past it, nothing short of a boot distinguishes a host that can run a guest from
  * one that only has the library to try.
  *
- * Any failure is a `false` rather than a throw: the question is whether the suite can run, and a
- * host that cannot answer it is a host that cannot run the suite.
+ * Failing, hanging and rejecting are all the same answer — `false` — because the question is
+ * whether the suite can run here, and a host that cannot answer it is a host that cannot run it.
  */
 async function canBootMicroVm(): Promise<boolean> {
   if (!await isMicrosandboxAvailable()) {
@@ -61,14 +80,15 @@ async function canBootMicroVm(): Promise<boolean> {
   const probe = createMicrosandboxSandbox({ image: DEFAULT_IMAGE, workDir: WORK_DIR })
   const session = probe.session(`boot-probe-${crypto.randomUUID().slice(0, 8)}`)
   try {
-    await session.exists(WORK_DIR)
-    return true
+    return await withBudget(session.exists(WORK_DIR).then(() => true), BOOT_TIMEOUT_MS) ?? false
   }
   catch {
     return false
   }
   finally {
-    await session.destroy().catch(() => undefined)
+    // Bounded too: a teardown of a sandbox that never came up has the same room to hang as the
+    // boot did, and a cleanup is not worth hanging the file over.
+    await withBudget(session.destroy(), BOOT_TIMEOUT_MS).catch(() => undefined)
   }
 }
 
