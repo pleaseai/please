@@ -1,0 +1,26 @@
+packages/core/test/agent/workspace.test.ts
+  s_bdd4816c96dae9::t_e3762f3fff86c4 2
+  s_bdd4816c96dae9::t_0fd9844579daa6 49-58
+packages/core/src/agent/define.ts
+  s_bdd4816c96dae9::t_ea99e70ed214cc 143-150
+  s_bdd4816c96dae9::t_4aa6c9bf9b9b73 116-123
+packages/core/src/agent/workspace.ts
+  s_bdd4816c96dae9::t_59578bed959c46 34-50,79
+  s_bdd4816c96dae9::t_f9fc66f31232e3 33
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "8b9034b9102bd4f523d5db15cb84537f2fb9bf55",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
