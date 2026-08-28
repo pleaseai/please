@@ -1,0 +1,55 @@
+packages/core/src/sandbox/local/process.ts
+  s_82e04306492abb::t_d1f9acd6dbf4ef 21,33-34,73-107,129,139
+packages/core/src/sandbox/microsandbox/process.ts
+  s_82e04306492abb::t_2530c8c8200fd0 41-60,66-70
+packages/core/src/sandbox/local/env.ts
+  s_82e04306492abb::t_27e132c4acc2d9 10-13
+packages/core/src/sandbox/microsandbox/files.ts
+  s_82e04306492abb::t_c4d80f46ebd4de 27-62,77,104
+  s_82e04306492abb::t_7e63465b352ccf 26
+packages/core/src/sandbox/local/session.ts
+  s_82e04306492abb::t_0347712fb8481a 20
+  s_82e04306492abb::t_fe30ae24625cfc 193-198
+packages/core/src/sandbox/just-bash/process.ts
+  s_82e04306492abb::t_74c93f4eade4da 81-89,91
+  s_82e04306492abb::t_068e9d6b3c3e4b 73-80,90,92-98,120-133
+packages/core/src/sandbox/microsandbox/provider.ts
+  s_82e04306492abb::t_27e132c4acc2d9 95-99
+packages/core/src/sandbox/local/process-state.ts
+  s_82e04306492abb::t_11576565dba23d 13-20,61-116,124-128,130-134,136,144-146,148,177
+  s_82e04306492abb::t_a604263fa0c6ac 129
+packages/core/src/sandbox/just-bash/provider.ts
+  s_82e04306492abb::t_068e9d6b3c3e4b 136-144,146
+packages/core/src/sandbox/microsandbox/sandbox.ts
+  s_82e04306492abb::t_2530c8c8200fd0 19,30-34,37
+packages/core/src/sandbox/local/journal.ts
+  s_82e04306492abb::t_27e132c4acc2d9 200-206
+  s_82e04306492abb::t_fe30ae24625cfc 56-71
+packages/core/src/sandbox/local/root.ts
+  s_82e04306492abb::t_a604263fa0c6ac 30-32,34-36,46-55,58,118-160,166,176-189,192-197,207-219
+  s_82e04306492abb::t_74c93f4eade4da 190-191
+packages/core/src/sandbox/just-bash/runtime.ts
+  s_82e04306492abb::t_068e9d6b3c3e4b 105-124,137-140
+  s_82e04306492abb::t_41f3f4d166e705 104
+packages/core/test/sandbox/local/backend.test.ts
+  s_82e04306492abb::t_83e514919c4a89 584-618
+  s_82e04306492abb::t_0347712fb8481a 247-256
+packages/core/src/sandbox/microsandbox/runtime.ts
+  s_82e04306492abb::t_2530c8c8200fd0 75-85,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "6a957ba24300f46790bb05ae4572a8635aeb4ff7",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
