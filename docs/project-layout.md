@@ -146,7 +146,8 @@ were not. And the adapter writes its own inline `skills` to `$HOME/.claude/skill
 and queries with `skills: 'all'`, so a seeded project-level directory and the `skills` option would
 be two sources for one thing — which is open question 2's problem, arriving a second time.
 
-**2. Where do permissions come from? — ANSWERED: the settings file wins (2026-08-28).**
+**2. Where do permissions come from? — ANSWERED: a seeded `deny` outranks `permissionMode`
+(2026-08-28).**
 `permissionMode`'s three values and a seeded `.claude/settings.json` describe the same thing twice,
 and question 1's answer made that a real conflict rather than a hypothetical one. The conflict is
 now resolved by measurement: `packages/core/scripts/probe-permissions.ts` seeds
@@ -168,16 +169,21 @@ so a file written by any other tool is not counted.
 | `allow-all`, every tool active | `bypassPermissions` + `allowDangerouslySkipPermissions`, **no** `settings` | **bound** |
 | `allow-all`, one tool inactive | `permissionMode: 'default'` + an adapter-built `settings` object | **bound** |
 
-So a seeded file is not a second opinion the adapter can overrule — it outranks `permissionMode` on
-both routes, including the one that asks the SDK to skip permissions entirely. And it does not
+So a seeded `deny` is not a second opinion the adapter can overrule — it outranks `permissionMode`
+on both routes, including the one that asks the SDK to skip permissions entirely. And it does not
 merely gate the call: the agent reported `No such tool available: Bash`, so a tool-wide `deny`
 removes the tool from the set rather than denying its use.
 
+**What this does not settle.** Only a `deny` was measured. Whether a seeded `allow` or `ask` can
+widen what `permissionMode` grants is untested — and an `ask` is untestable from outside in the
+first place, because the adapter's `canUseTool` auto-approves anything `allow-all` does not hold
+back. So the reading is one precedence case, not a general rule that the file always wins.
+
 Two consequences for this layout. The permission model is **not** something this framework flattens
-to three modes — `permissionMode` is a floor, and anything seeded under `workspace/` can lower it,
-which puts permissions on the same route as `CLAUDE.md` and hooks rather than in adapter settings.
-And the framework cannot claim `permissionMode` describes what an agent may do, because a workspace
-it did not write can contradict it.
+to three modes — `permissionMode` is not the whole of it, and anything seeded under `workspace/` can
+restrict beyond it, which puts permissions on the same route as `CLAUDE.md` and hooks rather than in
+adapter settings. And the framework cannot claim `permissionMode` describes what an agent may do,
+because a workspace it did not write can contradict it.
 
 A constraint fell out of the same run, and it is a sandbox obligation rather than a layout one: the
 bypass route **cannot start as root**. The CLI's gate is

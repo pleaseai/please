@@ -155,10 +155,11 @@ obtained by reading, one it could not fabricate at all.
 
 **So the honest split is narrower than "not in the contract".** Skills, the permission mode and
 the adapter's own settings are one surface; the `.claude` directory the runtime reads at startup
-is another, and the second is reachable through `onSession`. Hooks are the demonstrated case.
-Subagents (`.claude/agents/`), slash commands and plugins live in that same directory and are
-therefore *likely* to work, but nothing here has measured them — the distinction is worth keeping
-in any design that leans on them.
+is another, and the second is reachable through `onSession`. Hooks are the demonstrated case, and
+permissions were later measured to cross the two — a seeded `deny` outranks `permissionMode` (see
+the close of this page). Subagents (`.claude/agents/`), slash commands and plugins live in that
+same directory and are therefore *likely* to work, but nothing here has measured them — the
+distinction is worth keeping in any design that leans on them.
 
 **Other details the page omits.** Skills do not stay inline: the adapter writes each one to
 `$HOME/.claude/skills/<name>/SKILL.md` and then runs the query with `skills: 'all'`, because the
@@ -321,6 +322,15 @@ is which.
 
 The question that was open here — whether an adapter-native `.claude` directory means anything once
 seeded — has since been **measured, and it does**. See "What the source says, and what a live run
-measured" above. What that opens in turn is question 2 from
-[`project-layout.md`](./project-layout.md): a seeded settings file and `permissionMode` now
-genuinely describe the same thing twice, and one of them has to win.
+measured" above. What that opened in turn — question 2 from
+[`project-layout.md`](./project-layout.md), a seeded settings file and `permissionMode` describing
+the same thing twice — is **measured too (2026-08-28): a seeded `deny` outranks `permissionMode`**.
+A `{"permissions": {"deny": ["Bash", "Bash(*)"]}}` seeded into the session workdir blocked the bash
+tool on both routes `permissionMode` takes into the SDK — the `bypassPermissions` fast path
+included — while a control case with nothing seeded ran the same command. Two consequences for the
+record: `permissionMode` is not the whole permission model, and a tool-wide `deny` removes the tool
+outright (`No such tool available: Bash`) rather than gating its use. What a seeded `allow` or `ask`
+does against the adapter's own settings was **not** measured, so this is one precedence case rather
+than a general rule about which source wins.
+`packages/core/scripts/probe-permissions.ts` is the measurement; question 2 there carries the
+method and what it changes.
