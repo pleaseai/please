@@ -1,0 +1,26 @@
+packages/core/test/sandbox/microsandbox/backend.test.ts
+  s_82e04306492abb::t_e350e4deef7e21 11-23,47-76
+  s_82e04306492abb::t_a0842386701d40 77
+README.md
+  s_82e04306492abb::t_3418329cdb3803 102-105
+packages/core/src/sandbox/local/journal.ts
+  s_82e04306492abb::t_9902887aace089 201-214,217-218
+README.ko.md
+  s_82e04306492abb::t_3418329cdb3803 94-97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f45f54943bff3588ce7939d451bee843fb61861e",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
