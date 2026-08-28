@@ -149,18 +149,20 @@ describe('defineAgent session failures', () => {
     expect(state.destroys).toBe(1)
   })
 
-  it('leaves a container it did not create alone, even when onCreate rejects', async () => {
+  it('reaps just the same when the caller named the session id', async () => {
     const boom = new Error('corepack enable failed')
     const { sandbox, state } = fakeSandbox({ onCreate: () => Promise.reject(boom) })
 
-    // The contrast with the test above, and the whole reason the reap is conditional: a
-    // caller-supplied id may name a container that already existed — `docker/container.ts`
-    // adopts one rather than failing — so this call did not create it, and destroying it would
-    // throw away the state the caller named it to get back to. Only a generated id is ours.
+    // Naming is not resuming, which is why this is not the contrast case it first looks like.
+    // The AI SDK takes `createSession` as the fresh path and `resumeSession` as the returning
+    // one, a `sessionId` alone creates a new session under that name, and resumable state
+    // travels in `resumeFrom` — which `Agent.createSession` does not accept. So a supplied id
+    // buys no state worth protecting, and skipping the reap here would only leave a container
+    // this call woke running with nothing holding a handle to it.
     await expect(
-      defineAgent({ harness: fakeHarness().adapter, sandbox }).createSession({ sessionId: 'adopted' }),
+      defineAgent({ harness: fakeHarness().adapter, sandbox }).createSession({ sessionId: 'named' }),
     ).rejects.toThrow(boom)
-    expect(state.destroys).toBe(0)
+    expect(state.destroys).toBe(1)
   })
 
   it('reaps the container when the harness session itself fails to start', async () => {

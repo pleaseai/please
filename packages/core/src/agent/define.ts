@@ -133,10 +133,6 @@ export function defineAgent(definition: AgentDefinition): Agent {
   return {
     createSession: async (options) => {
       const sessionId = options?.sessionId ?? crypto.randomUUID()
-      // A caller-supplied id may name a container that already exists — `docker/container.ts`
-      // adopts one rather than failing — so this call did not create it and must not reap it.
-      // Only an id generated here is guaranteed to be ours.
-      const created = options?.sessionId === undefined
       let sessionWorkDir: string | undefined
       const agent = buildAgent((dir) => {
         sessionWorkDir = dir
@@ -157,12 +153,12 @@ export function defineAgent(definition: AgentDefinition): Agent {
       catch (cause) {
         // Without this the container started above outlives the failed call with nothing left
         // holding a handle to reap it — and on a paid backend it bills until its own timeout.
-        // Scoped to a container this call created: destroying an adopted one would throw away
-        // state the caller named it to get back to, which is worse than leaving it running for
-        // the caller that holds the id to reap.
-        if (created) {
-          await sandboxes.session(sessionId).destroy().catch(() => {})
-        }
+        // Unconditional, including when the caller named the id. Naming is not resuming: the
+        // AI SDK takes `createSession` as the fresh path and `resumeSession` as the returning
+        // one, a `sessionId` alone creates a new session under that name, and resumable state
+        // travels in `resumeFrom` — which this API does not expose. So there is no session to
+        // preserve here, and a container this call woke would otherwise be left to bill.
+        await sandboxes.session(sessionId).destroy().catch(() => {})
         throw cause
       }
 
