@@ -1,0 +1,25 @@
+packages/core/src/sandbox/docker/container.ts
+  s_bdd4816c96dae9::t_cf038a138c08c2 119-129,143,148,161,166,175-183,200-203,205,212-213,230-233,235-237
+  s_bdd4816c96dae9::t_86a1f8ceb22481 118
+packages/core/test/sandbox/docker/container-ownership.test.ts
+  s_bdd4816c96dae9::t_a2b5581c32dba6 18
+  s_bdd4816c96dae9::t_64184acb4decc4 87,104
+  s_bdd4816c96dae9::t_118760581ffaba 1-17,19-64,69-86,88-103,105-106
+  s_bdd4816c96dae9::t_d81fff3e086b20 65-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "b2d0c74d6e1516441742e79033f8dbddb28e0298",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
