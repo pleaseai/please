@@ -1,0 +1,62 @@
+package.json
+  s_82e04306492abb::t_29cc871c223e83 8
+packages/core/test/sandbox/local/harness-integration.test.ts
+  s_82e04306492abb::t_1aaeb5457160d6 46
+packages/core/src/sandbox/docker/index.ts
+  s_82e04306492abb::t_29cc871c223e83 2,6
+packages/core/test/sandbox/docker/harness-integration.test.ts
+  s_82e04306492abb::t_29cc871c223e83 46
+packages/core/test/index.test.ts
+  s_82e04306492abb::t_29cc871c223e83 3
+docs/project-layout.md
+  s_82e04306492abb::t_8bacaf43f3bbb4 197,203,208
+  s_82e04306492abb::t_29cc871c223e83 4,8,192
+CLAUDE.md
+  s_82e04306492abb::t_29cc871c223e83 9,14
+mise.toml
+  s_82e04306492abb::t_29cc871c223e83 3
+packages/core/package.json
+  s_82e04306492abb::t_29cc871c223e83 2
+README.ko.md
+  s_82e04306492abb::t_29cc871c223e83 73,81-83,135
+  s_82e04306492abb::t_56f2d661eb5566 84-86
+README.md
+  s_82e04306492abb::t_29cc871c223e83 81,89-91,146
+  s_82e04306492abb::t_56f2d661eb5566 92-94
+packages/core/src/sandbox/just-bash/runtime.ts
+  s_82e04306492abb::t_cfca82ad5ae7db 13,80
+packages/core/src/sandbox/local/index.ts
+  s_82e04306492abb::t_cfca82ad5ae7db 2,7
+packages/core/src/sandbox/microsandbox/index.ts
+  s_82e04306492abb::t_cfca82ad5ae7db 2,6
+packages/core/src/index.ts
+  s_82e04306492abb::t_29cc871c223e83 2
+packages/core/src/sandbox/microsandbox/runtime.ts
+  s_82e04306492abb::t_cfca82ad5ae7db 16,162
+packages/core/src/sandbox/harness/provider.ts
+  s_82e04306492abb::t_29cc871c223e83 28,45
+packages/core/test/sandbox/harness/provider.test.ts
+  s_82e04306492abb::t_29cc871c223e83 35
+packages/core/src/sandbox/just-bash/index.ts
+  s_82e04306492abb::t_cfca82ad5ae7db 2,7
+packages/core/test/sandbox/just-bash/harness-integration.test.ts
+  s_82e04306492abb::t_1aaeb5457160d6 36
+bun.lock
+  s_82e04306492abb::t_5063dab8c534b8 21,232
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "0ff41da9fab74e57c73aeea416f0515a5c44e060",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
