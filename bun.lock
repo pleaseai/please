@@ -17,6 +17,14 @@
         "typescript": "^6",
       },
     },
+    "examples/claude-code-docker": {
+      "name": "@pleasedev/example-claude-code-docker",
+      "dependencies": {
+        "@ai-sdk/harness": "^1.0.91",
+        "@ai-sdk/harness-claude-code": "^1.0.94",
+        "@pleasedev/core": "workspace:*",
+      },
+    },
     "packages/cli": {
       "name": "@pleasedev/cli",
       "version": "0.0.0",
@@ -216,6 +224,8 @@
     "@pleasedev/cli": ["@pleasedev/cli@workspace:packages/cli"],
 
     "@pleasedev/core": ["@pleasedev/core@workspace:packages/core"],
+
+    "@pleasedev/example-claude-code-docker": ["@pleasedev/example-claude-code-docker@workspace:examples/claude-code-docker"],
 
     "@rollup/rollup-android-arm-eabi": ["@rollup/rollup-android-arm-eabi@4.63.0", "", { "os": "android", "cpu": "arm" }, "sha512-70TeIFezKKy65LgAVyQh+w94/gjWhvPWaLaGGeMEgVrPkQhuj/M5bAYYZzIFUj9Y69oHyTm5Um/R6gcLh4A8JA=="],
 

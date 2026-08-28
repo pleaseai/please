@@ -8,4 +8,5 @@ dist/
 coverage/
 .please/state/
 .claude/settings.local.json
+.claude/worktrees/
 test-report.junit.xml

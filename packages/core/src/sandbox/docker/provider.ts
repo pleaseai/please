@@ -8,6 +8,7 @@
  * every other backend.
  */
 import type { SandboxPortEndpoint, SandboxPortEndpointOptions, SandboxProvider } from '../contract'
+import type { SandboxBackendFactory } from '../define'
 import type { ContainerOptions } from './container'
 import { createContainerHandle } from './container'
 import { createDockerSession } from './session'
@@ -100,4 +101,18 @@ export function createDockerSandbox(options: DockerSandboxOptions): SandboxProvi
     session,
     portEndpoint,
   } satisfies SandboxProvider
+}
+
+/**
+ * The Docker backend as a {@link SandboxBackendFactory}, for `defineSandbox({ backend })`.
+ *
+ * Same provider as {@link createDockerSandbox}, minus the two options a definition already
+ * knows: `workDir` and `ports` arrive from the placement rather than from the caller, so the
+ * two cannot disagree. Use `createDockerSandbox` directly when there is no definition to take
+ * them from — the integration tests do.
+ */
+export function docker(
+  options: Omit<DockerSandboxOptions, 'ports' | 'workDir'>,
+): SandboxBackendFactory {
+  return ({ ports, workDir }) => createDockerSandbox({ ...options, ports, workDir })
 }

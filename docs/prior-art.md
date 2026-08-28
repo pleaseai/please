@@ -10,7 +10,10 @@ distinction between "the page says" and "a live run showed" is load-bearing in t
 The flue and eve sections were first read **2026-08-26** and extended **2026-08-27**. The AI SDK
 harness contract was re-read and expanded **2026-08-27** across the overview, harness agent,
 adapters, tools, skills, workflow utilities, terminal UI and Claude Code adapter pages; the `ui`
-page is the one harness page still unread. Documentation sites show the latest version, so re-read
+page is the one harness page still unread. On **2026-08-28** two more sources were added: the
+Claude Agent SDK's own documentation, which is the layer *underneath* the adapter and settles what
+a seeded directory is read for, and the source of eve's and flue's example applications, read from
+their repositories rather than their docs sites. Documentation sites show the latest version, so re-read
 before leaning on any specific signature. The harness packages are marked experimental and warn of
 breaking changes between releases.
 
@@ -157,9 +160,11 @@ obtained by reading, one it could not fabricate at all.
 the adapter's own settings are one surface; the `.claude` directory the runtime reads at startup
 is another, and the second is reachable through `onSession`. Hooks are the demonstrated case, and
 permissions were later measured to cross the two — a seeded `deny` outranks `permissionMode` (see
-the close of this page). Subagents (`.claude/agents/`), slash commands and plugins live in that
-same directory and are therefore *likely* to work, but nothing here has measured them — the
-distinction is worth keeping in any design that leans on them.
+the close of this page). Subagents (`.claude/agents/`), slash commands and plugins live in
+that same directory. Skills, agents and commands were left unmeasured here and were settled
+afterwards by the Agent SDK's own documentation instead — see below, and `examples/claude-code-docker`
+invokes a seeded subagent. Plugins are the one that stays untested: the SDK has a `plugins` option
+the adapter does not expose.
 
 **Other details the page omits.** Skills do not stay inline: the adapter writes each one to
 `$HOME/.claude/skills/<name>/SKILL.md` and then runs the query with `skills: 'all'`, because the
@@ -180,6 +185,70 @@ therefore **cannot** run it: it exposes no ports, which every bridged adapter ne
 **What this means for `please`:** the agent loop, the adapter contract, and structured output are
 already someone else's problem. What is left is placement (which sandbox, which target), reach
 (which channel), and sequencing (which workflow).
+
+### What the Agent SDK itself loads from the filesystem (read 2026-08-28)
+
+Sources:
+[Use Claude Code features in the SDK](https://code.claude.com/docs/en/agent-sdk/claude-code-features),
+[Subagents in the SDK](https://code.claude.com/docs/en/agent-sdk/subagents),
+[Extend agents with skills](https://code.claude.com/docs/en/agent-sdk/skills)
+
+This is a layer below the adapter: what the Agent SDK does once the bridge has started it. It
+matters because the adapter passes no `settingSources`, so the SDK's default is what a seeded
+directory actually gets read as.
+
+**The default is everything.** "When you omit `settingSources`, `query()` reads the same filesystem
+settings as the Claude Code CLI: user, project, and local settings, CLAUDE.md files, and `.claude/`
+skills, agents, and commands." Omitting it "is equivalent to `["user", "project", "local"]`". That
+sentence covers the three things this repository had listed as unmeasured — skills, subagents and
+commands — and is why no further probe was written for them.
+
+**Where each source reads from**, with `<cwd>` the session's working directory:
+
+| Input | Location |
+| --- | --- |
+| project `settings.json` and hooks | `<cwd>/.claude/` only — **no parent-directory fallback** |
+| `CLAUDE.md`, `.claude/rules/*.md` | `<cwd>` and every parent directory |
+| skills, commands, subagents | `<cwd>` and every parent up to the repository root, plus each `additionalDirectories` entry |
+| `CLAUDE.md` in subdirectories | loaded on demand, when the agent reads a file in that subtree |
+
+The first row is the one that constrains a framework: hooks and permission rules have to sit
+directly under the session's own directory, while instructions and skills would still be found from
+a parent. A layout that seeds them all to the same place is right for the wrong reason.
+
+**Skills are files, not objects.** "Skills must be created as filesystem artifacts
+(`.claude/skills/<name>/SKILL.md`). The SDK does not have a programmatic API for registering
+skills." The `skills` option selects which discovered skills are enabled (`'all'`, a list of names,
+or `[]`), it does not register them. This inverts what this repository previously recorded from the
+AI SDK's own `skills` option: the inline-object form is the *adapter's* API, and the adapter
+implements it by writing those objects to `$HOME/.claude/skills/<name>/SKILL.md` before querying.
+Files are the native route; inline objects are a wrapper over it.
+
+**Subagents work both ways.** Filesystem (`.claude/agents/*.md`) or the programmatic `agents`
+option, with "programmatically defined agents take precedence over filesystem-based agents with the
+same name". `Agent` has to be in `allowedTools` for invocations to auto-approve. The adapter
+exposes no `agents` setting, so for a bridged run the filesystem is the only door.
+
+One consequence of that door being the only one: since Claude Code v2.1.198 a subagent runs in the
+**background by default**, and the only execution field a subagent *file* accepts is
+`background: true`, which forces the same direction. A caller that needs the subagent's answer
+inside the same turn cannot ask for it from the file form. `examples/claude-code-docker` shows both
+halves — the `Agent` tool call appears in the turn, proving the seeded file was read as a
+definition, and the verdict does not, because the run is still going when the turn ends.
+
+**A watcher caveat that matters for seeding.** "the watcher covers only directories that existed
+when the session started, so the first file in a new directory needs a session restart." Seeding
+therefore has to complete before the session starts, which is what `onSession` guarantees — it runs
+after the working directory exists and before the adapter starts. The 2026-08-27 hook measurement is
+the evidence that the ordering holds in practice.
+
+**What `settingSources` does not control**, and this is a deployment constraint rather than a
+curiosity: managed policy settings, `~/.claude.json`, auto memory under
+`~/.claude/projects/<project>/memory/`, and claude.ai MCP connectors are read regardless. The page
+carries an explicit warning — "Do not rely on default `query()` options for multi-tenant isolation
+… For multi-tenant deployments, run each tenant in its own filesystem". A container per session
+satisfies that; a shared `$HOME` across tenants would not, and the adapter writes its own skills
+into `$HOME`.
 
 ## flue
 

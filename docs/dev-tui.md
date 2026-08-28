@@ -3,8 +3,13 @@
 > **Status: half decided, half blocked.** The boot chrome described below is implemented and
 > tested in `@pleasedev/cli` (`packages/cli/src/ui`). The `dev` command it exists for is **not**,
 > because the interactive UI needs two things from `defineAgent` that `defineAgent` does not
-> expose yet. Those are named in [What the interactive UI needs](#what-the-interactive-ui-needs),
+> expose. Those are named in [What the interactive UI needs](#what-the-interactive-ui-needs),
 > and they are API decisions, not omissions to be quietly filled in.
+>
+> This note was first written while `defineAgent` was still unmerged, and said the command was
+> waiting for it to land. It has landed (#13), and the two gaps are unchanged — they are
+> properties of the shape that shipped, not of its being unfinished, and the wording below is
+> checked against that shipped shape rather than against a draft.
 
 Measurements below are against `@ai-sdk/tui@1.0.84` and `@ai-sdk/harness@1.0.91`, read on
 2026-08-28 from the packages themselves rather than from the documentation.
@@ -82,7 +87,7 @@ SDK's own guide papers over with an adapter: `HarnessAgent.stream()` requires a 
 call, and the terminal UI does not know about sessions. The documented workaround is a small
 object that closes over one session for the lifetime of the run.
 
-`defineAgent` does not currently expose the pieces that adapter needs:
+`defineAgent` as merged does not expose the pieces that adapter needs:
 
 1. **No `stream`.** `AgentSession.prompt()` returns a completed `AgentTurn` — it wraps
    `HarnessAgent.generate()`. The terminal UI cannot render a turn that only arrives once it is
@@ -99,8 +104,8 @@ object that closes over one session for the lifetime of the run.
 Three ways out, and this is the decision to make rather than to assume:
 
 - **(a) Widen `AgentSession`** with `stream()` and surface `tools` on `Agent`. Keeps `defineAgent`
-  the only entry point; grows the surface that the README still calls undesigned, and re-exports
-  AI SDK stream types through it.
+  the only entry point; grows a surface that is one commit old, and re-exports AI SDK stream
+  types through it.
 - **(b) Expose the underlying pair** — return the `HarnessAgent` and its `HarnessAgentSession`
   from `createSession`, and let the CLI build the adapter. Smallest addition, and honest about the
   fact that the harness boundary is the AI SDK's; leaks a type `defineAgent` otherwise hides.

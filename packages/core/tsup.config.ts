@@ -3,7 +3,7 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
   entry: [
     'src/index.ts',
-    'src/sandbox/contract/index.ts',
+    'src/sandbox/index.ts',
     'src/sandbox/harness/index.ts',
     'src/sandbox/docker/index.ts',
   ],

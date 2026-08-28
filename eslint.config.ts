@@ -1,7 +1,11 @@
 import pleaseai from '@pleaseai/eslint-config'
 
 export default pleaseai(
-  {},
+  {
+    // Example workspaces are fixtures seeded into a sandbox, not source. `sum.js` carries a
+    // deliberate bug for the agent to find, and formatting it would be beside the point.
+    ignores: ['examples/*/src/workspace/**'],
+  },
   {
     // Tests belong in a package's `test/` directory, never inside `src/`.
     // Without this, a stray `src/**/*.test.ts` is silently indexed as production
