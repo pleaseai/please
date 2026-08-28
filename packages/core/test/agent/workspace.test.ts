@@ -34,6 +34,16 @@ describe('readWorkspace', () => {
     expect(files['CLAUDE.md']).toBe('# conventions\n')
   })
 
+  it('reads a source that already ends in a separator', async () => {
+    const root = await fixture()
+
+    // The path is built with `join` rather than a template, so a trailing separator does not
+    // produce a doubled one. What that spelling actually rescued is the filesystem root, where
+    // the old strip left an empty string and every read failed with ENOENT — and a test cannot
+    // walk `/` to prove it, so this pins the neighbouring case the same line serves.
+    expect(await readWorkspace(`${root}/`)).toEqual(await readWorkspace(root))
+  })
+
   it('accepts a file URL', async () => {
     const files = await readWorkspace(new URL(`file://${await fixture()}/`))
 
@@ -72,5 +82,42 @@ describe('seedWorkspace', () => {
       { path: '/work/session-1/.claude/settings.json', content: '{}' },
     ])
     expect(written).toEqual(['/work/session-1/CLAUDE.md', '/work/session-1/.claude/settings.json'])
+  })
+
+  it('refuses an absolute key rather than writing outside the session directory', async () => {
+    const session = recorder()
+
+    // Session-relative by construction, not by guarantee: an inlined workspace carries whatever
+    // keys the build produced, and `${sessionWorkDir}/${'/etc/profile'}` is just `/etc/profile`
+    // with a prefix that stops mattering — a write straight into the container's own filesystem.
+    await expect(seedWorkspace(session, '/work/session-1', { '/etc/profile': 'export X=1\n' }))
+      .rejects
+      .toThrow(/\/etc\/profile/)
+    // Refused before the write, not after it: a guard that reported the path once the file was
+    // already there would name the damage rather than prevent it.
+    expect(session.writes).toEqual([])
+  })
+
+  it('refuses a key that climbs out with a .. segment', async () => {
+    const session = recorder()
+
+    // The same escape by the other route, and the one a relative-looking key hides: this
+    // resolves to `/work/.ssh/authorized_keys`, a sibling of the session rather than a child.
+    await expect(seedWorkspace(session, '/work/session-1', {
+      '../.ssh/authorized_keys': 'ssh-rsa AAAA\n',
+    })).rejects.toThrow(/\.\.\/\.ssh\/authorized_keys/)
+    expect(session.writes).toEqual([])
+  })
+
+  it('names the offending key even when good ones precede it', async () => {
+    const session = recorder()
+
+    // Object key order is insertion order, so the guard is reached mid-loop here — which is
+    // what proves it runs per key rather than once over the whole record.
+    await expect(seedWorkspace(session, '/work/session-1', {
+      'CLAUDE.md': '# conventions\n',
+      '../escape.txt': 'no',
+    })).rejects.toThrow(/escape\.txt/)
+    expect(session.writes).toEqual([{ path: '/work/session-1/CLAUDE.md', content: '# conventions\n' }])
   })
 })

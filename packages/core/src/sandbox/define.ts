@@ -95,5 +95,16 @@ export function defineSandbox(definition: SandboxDefinition): SandboxDefinition 
 export function resolveSandbox(definition: SandboxDefinition): ResolvedSandbox {
   const workDir = definition.workDir ?? DEFAULT_WORK_DIR
   const ports = definition.ports ?? DEFAULT_PORTS
+  // An explicit `[]` bypasses the default and publishes nothing, and a bridged adapter reaches
+  // its runtime over a published port — so the sandbox would come up and the first connect
+  // would fail, a long way from the line that caused it.
+  if (ports.length === 0) {
+    throw new TypeError('sandbox `ports` cannot be empty: a bridged harness is reached over a published port')
+  }
+  for (const port of ports) {
+    if (!Number.isInteger(port) || port < 1 || port > 65535) {
+      throw new TypeError(`sandbox port '${port}' is not a valid TCP port`)
+    }
+  }
   return { workDir, ports, sandboxes: definition.backend({ workDir, ports }), definition }
 }

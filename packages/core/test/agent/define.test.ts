@@ -149,6 +149,20 @@ describe('defineAgent session failures', () => {
     expect(state.destroys).toBe(1)
   })
 
+  it('leaves a container it did not create alone, even when onCreate rejects', async () => {
+    const boom = new Error('corepack enable failed')
+    const { sandbox, state } = fakeSandbox({ onCreate: () => Promise.reject(boom) })
+
+    // The contrast with the test above, and the whole reason the reap is conditional: a
+    // caller-supplied id may name a container that already existed — `docker/container.ts`
+    // adopts one rather than failing — so this call did not create it, and destroying it would
+    // throw away the state the caller named it to get back to. Only a generated id is ours.
+    await expect(
+      defineAgent({ harness: fakeHarness().adapter, sandbox }).createSession({ sessionId: 'adopted' }),
+    ).rejects.toThrow(boom)
+    expect(state.destroys).toBe(0)
+  })
+
   it('reaps the container when the harness session itself fails to start', async () => {
     const boom = new Error('bridge never came up')
     // The harness makes its own best-effort teardown attempt and swallows whatever it gets, so

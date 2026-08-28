@@ -60,17 +60,20 @@ export async function readWorkspace(source: WorkspaceSource): Promise<WorkspaceF
     return source
   }
 
-  const [{ readdir, readFile, stat }, { fileURLToPath }] = await Promise.all([
+  const [{ readdir, readFile, stat }, { fileURLToPath }, { join }] = await Promise.all([
     import('node:fs/promises'),
     import('node:url'),
+    import('node:path'),
   ])
 
-  const root = (source instanceof URL ? fileURLToPath(source) : source).replace(/[/\\]+$/, '')
+  // `join` rather than a template, so a source that already ends in a separator does not
+  // produce a doubled one — and a filesystem root, which has nothing to strip, still reads.
+  const root = source instanceof URL ? fileURLToPath(source) : source
   const files: Record<string, string> = {}
   // `recursive` returns paths relative to the root, dotfiles included — which is the point,
   // since `.claude/` is the most interesting thing a workspace carries.
   for (const entry of await readdir(root, { recursive: true })) {
-    const absolute = `${root}/${entry}`
+    const absolute = join(root, entry)
     if (!(await stat(absolute)).isFile()) {
       continue
     }
@@ -99,6 +102,12 @@ export async function seedWorkspace(
 ): Promise<readonly string[]> {
   const written: string[] = []
   for (const [path, content] of Object.entries(files)) {
+    // Session-relative by construction, but not by guarantee: an inlined workspace carries
+    // whatever keys the build produced, and one absolute path or `..` segment writes outside
+    // the session directory entirely. Refusing is the only safe reading of an escaping path.
+    if (/^[/\\]/.test(path) || path.split(/[/\\]/).includes('..')) {
+      throw new TypeError(`workspace path '${path}' must stay inside the session directory`)
+    }
     const target = `${sessionWorkDir}/${path}`
     await session.writeTextFile({ path: target, content })
     written.push(target)

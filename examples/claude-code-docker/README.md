@@ -9,8 +9,10 @@ bun run examples/claude-code-docker/index.ts
 
 ## What it needs
 
-The example checks all three before doing anything expensive, and prints `SKIP` rather than
-failing when one is missing.
+The example checks what it can before doing anything expensive — the Docker daemon and the
+credential — and prints `SKIP` rather than failing when one is missing. Egress is not probed:
+proving it means reaching the registry from inside the container, which costs the container
+start that `SKIP` exists to avoid, so a missing one surfaces as a bootstrap failure instead.
 
 - **A Linux-container Docker daemon** — Docker Desktop, OrbStack, or Colima.
 - **An Anthropic credential** in `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`. It is forwarded

@@ -22,7 +22,7 @@ async function main(): Promise<void> {
     log('SKIP', 'no Linux-container docker daemon is reachable')
     return
   }
-  if (process.env.ANTHROPIC_API_KEY === undefined && process.env.ANTHROPIC_AUTH_TOKEN === undefined) {
+  if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
     log('SKIP', 'needs ANTHROPIC_API_KEY or ANTHROPIC_AUTH_TOKEN in the environment')
     return
   }
