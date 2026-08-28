@@ -122,11 +122,14 @@ export function startBootRow(options: BootRowOptions = {}): BootRow {
   let stopped = false
   let timer: ReturnType<typeof setTimeout> | undefined
 
+  const row = (phase: { message: string, detail: string }): string =>
+    renderBootRow({ theme, glyph, lit, ...phase, columns: output.columns })
+
   const paint = (): void => {
     if (current === undefined || live === undefined) {
       return
     }
-    live.update([renderBootRow({ theme, glyph, lit, ...current, columns: output.columns })])
+    live.update([row(current)])
     painted = true
   }
 
@@ -178,10 +181,7 @@ export function startBootRow(options: BootRowOptions = {}): BootRow {
         output.write(`${committed}\n`)
         return
       }
-      live.flush(
-        [committed],
-        [renderBootRow({ theme, glyph, lit, ...current, columns: output.columns })],
-      )
+      live.flush([committed], [row(current)])
       painted = true
     },
     stop() {

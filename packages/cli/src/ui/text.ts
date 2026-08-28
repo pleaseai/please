@@ -107,7 +107,7 @@ function textUnits(input: string): TextUnit[] {
       continue
     }
 
-    ANSI_PATTERN.lastIndex = 0
+    // `search` runs the pattern from 0 and restores `lastIndex`, so the `g` flag is inert here.
     const nextAnsi = remaining.search(ANSI_PATTERN)
     const plain = remaining.slice(0, nextAnsi === -1 ? remaining.length : nextAnsi)
     for (const { segment } of segmenter.segment(plain)) {

@@ -10,6 +10,7 @@
 import process from 'node:process'
 import picocolors from 'picocolors'
 import { sanitizeForTerminal } from './sanitize'
+import { visibleLength } from './text'
 
 export type CliTone
   = | 'accent'
@@ -82,7 +83,7 @@ export function renderCliBanner(
   input: { readonly title: string, readonly subtitle?: string },
 ): string {
   const title = sanitizeForTerminal(input.title)
-  const lines = [theme.heading(title), theme.muted('='.repeat(title.length))]
+  const lines = [theme.heading(title), theme.muted('='.repeat(visibleLength(title)))]
   if (input.subtitle !== undefined) {
     lines.push(theme.muted(sanitizeForTerminal(input.subtitle)))
   }
@@ -130,7 +131,7 @@ export function renderCliTaggedLine(
   const message = applyTone(theme, input.tone ?? 'default', sanitizeForTerminal(input.message))
   const [first = '', ...rest] = indentContinuation(
     message.split('\n'),
-    `${' '.repeat(prefix.length)} `,
+    `${' '.repeat(visibleLength(prefix))} `,
   )
   const head = `${theme.muted(prefix)} ${first}`
   return rest.length === 0 ? head : `${head}\n${rest.join('\n')}`

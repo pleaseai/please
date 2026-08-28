@@ -5,6 +5,7 @@
  * indentation, sanitization — rather than about which escape a palette happens to choose.
  */
 import { describe, expect, it } from 'bun:test'
+import { visibleLength } from '../../src/ui/text'
 import {
   createCliTheme,
   renderCliBanner,
@@ -35,6 +36,15 @@ describe('renderCliBanner', () => {
   it('adds the subtitle on its own line', () => {
     expect(renderCliBanner(theme, { title: 'dev', subtitle: 'docker' }))
       .toBe('dev\n===\ndocker')
+  })
+
+  it('rules a wide title to its cell width, not its code-unit length', () => {
+    // '컨테이너 시작' is 7 code units and 13 cells. Ruling by `.length` leaves the rule
+    // visibly short of the title — the exact mistake `text.ts` exists to prevent.
+    const [title = '', rule = ''] = renderCliBanner(theme, { title: '컨테이너 시작' }).split('\n')
+
+    expect(visibleLength(rule)).toBe(visibleLength(title))
+    expect(visibleLength(rule)).toBe(13)
   })
 })
 
@@ -73,5 +83,10 @@ describe('renderCliTaggedLine', () => {
   it('indents continuation lines past the tag', () => {
     expect(renderCliTaggedLine(theme, { tag: 'x', message: 'one\ntwo' }))
       .toBe('[X] one\n    two')
+  })
+
+  it('aligns a continuation under a wide tag, which is wider than its code units', () => {
+    expect(renderCliTaggedLine(theme, { tag: '도커', message: 'a\nb' }))
+      .toBe('[도커] a\n       b')
   })
 })
