@@ -1,0 +1,68 @@
+packages/cli/src/ui/theme.ts
+  s_512bec718b13bc::t_3d5f9226b7cf09 1-137
+packages/cli/package.json
+  s_512bec718b13bc::t_5c4cd8a924b9d4 1-23
+packages/cli/src/ui/ansi.ts
+  s_512bec718b13bc::t_03365929435f2f 1-32
+packages/cli/src/ui/sanitize.ts
+  s_512bec718b13bc::t_e33f02023b8b41 18,20-21,23-24,33-34,39-40,45-46,52-53,141
+  s_512bec718b13bc::t_657ac60880c2e5 122-125
+  s_512bec718b13bc::t_41cf464e70050b 1-17,19,22,25-32,35-38,41-44,47-51,54-121,126-140,142-158
+packages/cli/test/ui/live-region.test.ts
+  s_512bec718b13bc::t_03d45d92de9994 1-103
+packages/cli/tsconfig.json
+  s_512bec718b13bc::t_5c4cd8a924b9d4 1-7
+packages/cli/test/ui/boot-row.test.ts
+  s_512bec718b13bc::t_6b777586eaf066 1-148
+packages/cli/test/ui/theme.test.ts
+  s_512bec718b13bc::t_20b166abd09bb8 1-77
+packages/cli/test/ui/progress-pulse.test.ts
+  s_512bec718b13bc::t_fc5c088a09d470 1-60
+NOTICE
+  s_512bec718b13bc::t_4ebf8b1a191f0c 22-32
+README.ko.md
+  s_512bec718b13bc::t_51685869a830f9 131-132,136,157-159
+  s_512bec718b13bc::t_6fe815d9556cf9 160
+packages/cli/src/ui/live-region.ts
+  s_512bec718b13bc::t_afcc2fbde6105a 1-95
+docs/dev-tui.md
+  s_512bec718b13bc::t_acb7b2fe3eb901 1-171
+packages/cli/test/ui/sanitize.test.ts
+  s_512bec718b13bc::t_657ac60880c2e5 39-46
+  s_512bec718b13bc::t_cd17021ab7e9b1 1-38,47-58
+sonar-project.properties
+  s_512bec718b13bc::t_4ebf8b1a191f0c 10-11,13-14
+packages/cli/src/ui/index.ts
+  s_512bec718b13bc::t_183ff1303ec9a7 1-42
+packages/cli/src/ui/progress-pulse.ts
+  s_512bec718b13bc::t_afcc2fbde6105a 1-61
+packages/cli/src/ui/boot-row.ts
+  s_512bec718b13bc::t_e33f02023b8b41 19,31
+  s_512bec718b13bc::t_332cb7dc3764f7 1-18,20-30,32-167,171-200
+  s_512bec718b13bc::t_183ff1303ec9a7 168-170
+packages/cli/src/ui/text.ts
+  s_512bec718b13bc::t_2536f6033debc1 1-187
+packages/cli/test/ui/text.test.ts
+  s_512bec718b13bc::t_b12e3086c673a1 1-79
+README.md
+  s_512bec718b13bc::t_51685869a830f9 141-142,146,167-169
+  s_512bec718b13bc::t_49944a61b5fddb 170
+bun.lock
+  s_512bec718b13bc::t_c43193be8770a3 20-29,214-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "f03b982e9d31ad534f1fcca8706f4d41d549fb23",
+  "prompts": {},
+  "sessions": {
+    "s_512bec718b13bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0fb0680-b744-4f6e-82af-422f495c1b93",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
