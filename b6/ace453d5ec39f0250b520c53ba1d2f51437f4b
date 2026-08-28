@@ -1,0 +1,44 @@
+packages/core/src/sandbox/local/journal.ts
+  s_82e04306492abb::t_8572ba730bbf23 38
+  s_82e04306492abb::t_20576b19eba938 106-109,111
+  s_82e04306492abb::t_33cd70dfc26c76 85-90,94-96
+  s_82e04306492abb::t_4f7b0658b0be76 152
+  s_82e04306492abb::t_e14b9c1cfe9e66 176-190,201-203
+  s_82e04306492abb::t_539403c88750b0 161
+packages/core/test/sandbox/local/harness-integration.test.ts
+  s_82e04306492abb::t_0fcdbcf48dc165 131
+packages/core/src/sandbox/contract/types.ts
+  s_82e04306492abb::t_461393fe3872f9 270-278
+  s_82e04306492abb::t_9ff9bdb1d20242 256-267
+packages/core/src/sandbox/local/process-logs.ts
+  s_82e04306492abb::t_461393fe3872f9 27-33
+packages/core/src/sandbox/local/session.ts
+  s_82e04306492abb::t_9857bbcce4bc5a 125-150,153-157,160
+  s_82e04306492abb::t_f286817651a543 272,278-286,288-289
+  s_82e04306492abb::t_355d66e66786c7 17
+  s_82e04306492abb::t_f8cbee14e83ce0 61-65
+  s_82e04306492abb::t_f0cc5c55afcbf7 169-188,199,204-206,239-241
+packages/core/test/sandbox/local/backend.test.ts
+  s_82e04306492abb::t_7eff94e21680a2 17-18,507,511-513,516,519,521-548,555-575
+  s_82e04306492abb::t_35931040a161db 552
+  s_82e04306492abb::t_0fcdbcf48dc165 583
+  s_82e04306492abb::t_0ed8a5cce2c323 549-551,553-554
+  s_82e04306492abb::t_afb893e2972d87 508-510,514-515,517-518,520
+  s_82e04306492abb::t_d49aa16a3a6d43 576
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "b6ace453d5ec39f0250b520c53ba1d2f51437f4b",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
