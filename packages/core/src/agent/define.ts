@@ -113,7 +113,14 @@ export function defineAgent(definition: AgentDefinition): Agent {
       onSession: async (context) => {
         capture(context.sessionWorkDir)
         if (definition.workspace !== undefined) {
-          workspace ??= readWorkspace(definition.workspace)
+          // Memoise the read, **not its failure**. A rejected promise left in the latch would be
+          // replayed by every later session without ever touching the filesystem again, so one
+          // transient `EMFILE` would make the agent permanently unable to seed — the same rule
+          // `sandbox/docker/container.ts` and `sandbox/harness/session.ts` already follow.
+          workspace ??= readWorkspace(definition.workspace).catch((cause: unknown) => {
+            workspace = undefined
+            throw cause
+          })
           await seedWorkspace(context.session, context.sessionWorkDir, await workspace)
         }
         // The definition's own hook runs last, so it can overwrite anything the workspace
@@ -131,11 +138,16 @@ export function defineAgent(definition: AgentDefinition): Agent {
         sessionWorkDir = dir
       })
 
-      // `onCreate` acquires the container, so from here on a failure has something to clean up.
-      await sandboxDefinition.onCreate?.({ session: sandboxes.session(sessionId), sandboxId: sessionId })
-
       let session: Awaited<ReturnType<HarnessAgent['createSession']>>
       try {
+        // `onCreate` acquires the container, so from here on a failure has something to clean
+        // up — *its own* included. The call that runs the hook is what starts the container, so
+        // a hook that then rejects (`corepack enable` exiting non-zero, a proxy unreachable)
+        // leaves one running behind a `createSession` that never returned a handle to reap it.
+        await sandboxDefinition.onCreate?.({
+          session: sandboxes.session(sessionId),
+          sandboxId: sessionId,
+        })
         session = await agent.createSession({ sessionId })
       }
       catch (cause) {

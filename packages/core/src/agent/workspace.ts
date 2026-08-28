@@ -31,6 +31,24 @@ function isFiles(source: WorkspaceSource): source is WorkspaceFiles {
 }
 
 /**
+ * Bytes to text, refusing rather than mangling.
+ *
+ * A workspace carries text by construction — {@link WorkspaceFiles} is a `Record` of strings and
+ * the seed writes every entry with `writeTextFile`. A non-fatal UTF-8 decode turns a PNG, a
+ * `.git` pack or a prebuilt binary into a string of U+FFFD and reports success, so the sandbox
+ * ends up holding a corrupt file under the original's name with nothing to notice it by. Naming
+ * the file is the only useful answer.
+ */
+function decodeText(bytes: Uint8Array, path: string): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  }
+  catch {
+    throw new TypeError(`workspace file '${path}' is not valid UTF-8; a workspace carries text only`)
+  }
+}
+
+/**
  * Read a workspace source into files.
  *
  * `node:fs` is reached through a dynamic import so that a bundle which never passes a path —
@@ -58,7 +76,7 @@ export async function readWorkspace(source: WorkspaceSource): Promise<WorkspaceF
     }
     // The sandbox is Linux whatever the host is, so a Windows separator is rewritten rather
     // than carried into a container path.
-    files[entry.split('\\').join('/')] = await readFile(absolute, 'utf8')
+    files[entry.split('\\').join('/')] = decodeText(await readFile(absolute), absolute)
   }
   return files
 }

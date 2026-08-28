@@ -1,4 +1,5 @@
 import type { WorkspaceWriter } from '../../src/agent/workspace'
+import { Buffer } from 'node:buffer'
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -44,6 +45,16 @@ describe('readWorkspace', () => {
 
     // The Worker case: no filesystem to read, the directory having been inlined at build time.
     expect(await readWorkspace(inlined)).toBe(inlined)
+  })
+
+  it('refuses a file that is not UTF-8 rather than seeding a mangled copy of it', async () => {
+    const root = await fixture()
+    // A PNG header: valid bytes, not valid UTF-8. Decoded leniently it becomes a string of
+    // U+FFFD, which would be written into the sandbox under the original's name and reported
+    // as a success — a corrupt file with nothing to notice it by.
+    await writeFile(join(root, 'logo.png'), Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A]))
+
+    await expect(readWorkspace(root)).rejects.toThrow(/logo\.png/)
   })
 })
 
