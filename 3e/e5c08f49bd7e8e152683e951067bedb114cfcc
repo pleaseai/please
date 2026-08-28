@@ -1,0 +1,28 @@
+.github/workflows/ci.yml
+  s_512bec718b13bc::t_8c852cdf2066a7 64,67,72,76
+  s_512bec718b13bc::t_77d1c973b9efe4 49-50,52-57
+packages/cli/src/ui/text.ts
+  s_512bec718b13bc::t_244aed2dc0245c 110
+packages/cli/src/ui/theme.ts
+  s_512bec718b13bc::t_df2e9a83fa4be6 13,86,134
+packages/cli/test/ui/theme.test.ts
+  s_512bec718b13bc::t_1d7c78f9b73357 8,40-48,87-91
+packages/cli/src/ui/boot-row.ts
+  s_512bec718b13bc::t_244aed2dc0245c 125-127,132,184
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "3ee5c08f49bd7e8e152683e951067bedb114cfcc",
+  "prompts": {},
+  "sessions": {
+    "s_512bec718b13bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0fb0680-b744-4f6e-82af-422f495c1b93",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
