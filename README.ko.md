@@ -81,6 +81,7 @@
 | `@pleaseai/core/sandbox` | 백엔드 계약 — 벤더 중립 타입 |
 | `@pleaseai/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
 | `@pleaseai/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
+| `@pleaseai/core/sandbox/local` | 호스트 프로세스 백엔드 — 데몬도 이미지도, **격리도 없다**. 같은 이유로 호스트 전용 |
 
 하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
 호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
@@ -127,6 +128,7 @@ packages/
       contract/              # 백엔드 계약
       harness/               # 그 계약 위의 HarnessV1SandboxProvider
       docker/                # 로컬 Docker 백엔드 (호스트 전용)
+      local/                 # 호스트 프로세스 백엔드 (호스트 전용, 격리 없음)
     scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
 docs/
   prior-art.md               # eve, flue, AI SDK 하네스가 이미 하고 있는 것

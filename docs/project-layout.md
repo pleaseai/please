@@ -194,6 +194,12 @@ every container it creates — `containerEnv`, which the caller's own `env` can 
 *is* a deliberate sandbox, so the claim is true rather than a way around the check, and the probe
 no longer sets it: the run is now also the check that the backend does.
 
+The same constraint read from the other side is why `@pleaseai/core/sandbox/local` — a host-process
+backend added since, for the cases where no daemon is reachable — deliberately does **not** declare
+it. There the claim would be false, and the root check it defeats is the last thing standing between
+a bypassed permission prompt and the developer's own home directory. Isolation is what makes the
+declaration honest, so only the backend that provides isolation makes it.
+
 **3. How does `host-tools/` behave across both targets?** A Worker has a per-invocation CPU limit; a
 Node deployment has a real filesystem and owns its own restart reconciliation. The README says this
 project absorbs that asymmetry rather than leaking it, and this is the first place that has to be
