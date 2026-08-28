@@ -18,7 +18,7 @@
       },
     },
     "packages/cli": {
-      "name": "@pleaseai/cli",
+      "name": "@pleasedev/cli",
       "version": "0.0.0",
       "dependencies": {
         "picocolors": "^1.1.1",
@@ -211,9 +211,9 @@
 
     "@pkgr/core": ["@pkgr/core@0.3.6", "", {}, "sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA=="],
 
-    "@pleaseai/cli": ["@pleaseai/cli@workspace:packages/cli"],
-
     "@pleaseai/eslint-config": ["@pleaseai/eslint-config@0.0.4", "", { "dependencies": { "@antfu/eslint-config": "^8.0.0", "eslint-plugin-package-json": "^0.91.0" }, "peerDependencies": { "eslint": "^9.10.0 || ^10.0.0" } }, "sha512-FWzFoZfz1Di/BCT+G9HZpyWcOT4L3lcu9jWRfOWTjRsCkEtbUVBbgp9Wa8+C5lumGq5S5ecAKyDbfAb6xd+w0Q=="],
+
+    "@pleasedev/cli": ["@pleasedev/cli@workspace:packages/cli"],
 
     "@pleasedev/core": ["@pleasedev/core@workspace:packages/core"],
 
