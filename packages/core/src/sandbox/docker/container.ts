@@ -116,6 +116,18 @@ async function adopt(name: string, status: string): Promise<string | undefined> 
 }
 
 /**
+ * How the container behind a handle came to exist.
+ *
+ * `created` is what tells a later teardown whether it is allowed to destroy this container.
+ * `acquire` already branches on the two cases, so it reports which one it took rather than
+ * leaving the caller to re-derive an answer only this function ever knew.
+ */
+interface Acquisition {
+  name: string
+  created: boolean
+}
+
+/**
  * Create the container, or adopt one that already carries this name.
  *
  * Adoption is what makes a sandbox id resumable across processes: a second process asking
@@ -128,12 +140,12 @@ async function adopt(name: string, status: string): Promise<string | undefined> 
  * cancelled command) leaves nothing to adopt, and the next `ready()` must be free to create
  * from scratch rather than keep starting a name the daemon has never heard of.
  */
-async function acquire(name: string, options: ContainerOptions): Promise<string> {
+async function acquire(name: string, options: ContainerOptions): Promise<Acquisition> {
   const existing = await containerStatus(name)
   if (existing !== undefined) {
     const adopted = await adopt(name, existing)
     if (adopted !== undefined) {
-      return adopted
+      return { name: adopted, created: false }
     }
   }
   try {
@@ -146,12 +158,12 @@ async function acquire(name: string, options: ContainerOptions): Promise<string>
       const raced = await containerStatus(name)
       const adopted = raced === undefined ? undefined : await adopt(name, raced)
       if (adopted !== undefined) {
-        return adopted
+        return { name: adopted, created: false }
       }
     }
     throw cause
   }
-  return name
+  return { name, created: true }
 }
 
 export interface ContainerHandle {
@@ -160,7 +172,15 @@ export interface ContainerHandle {
   readonly ready: () => Promise<string>
   /** Host address an exposed container port is reachable at, as `host:port`. */
   readonly hostAddress: (port: number) => Promise<string>
-  /** Remove the container and everything on it. Idempotent. */
+  /**
+   * Remove the container and everything on it, if this handle is the one that created it.
+   * Idempotent.
+   *
+   * A handle that adopted an existing container, or that never acquired one at all, removes
+   * nothing and resolves. `docker rm` is addressed by name, and a name is shared across
+   * processes by design — so carrying the name is not evidence that this handle is entitled
+   * to a destructive call on it. Only having created the container is.
+   */
   readonly remove: () => Promise<void>
   /**
    * The container name if it is already running, without creating or starting anything.
@@ -177,14 +197,19 @@ export function createContainerHandle(
   options: ContainerOptions & { prefix?: string },
 ): ContainerHandle {
   const name = containerName(sandboxId, options.prefix)
-  let acquisition: Promise<string> | undefined
+  // Ownership lives on the latch rather than beside it: `remove` clears the latch so the
+  // handle may create again afterwards, and a claim to a container that no longer exists
+  // would otherwise outlive the acquisition that earned it.
+  let acquisition: Promise<Acquisition> | undefined
 
-  const ready = (): Promise<string> => (acquisition ??= acquire(name, options).catch(
+  const acquireOnce = (): Promise<Acquisition> => (acquisition ??= acquire(name, options).catch(
     (cause: unknown) => {
       acquisition = undefined
       throw cause
     },
   ))
+
+  const ready = async (): Promise<string> => (await acquireOnce()).name
 
   return {
     name,
@@ -202,7 +227,14 @@ export function createContainerHandle(
       return `127.0.0.1:${line.slice(separator + 1)}`
     },
     remove: async () => {
+      // Settle an acquisition still in flight before deciding: a create this handle started
+      // and then abandoned is exactly the container it is responsible for removing. A
+      // failed one owns nothing, which is also what an untouched handle reports.
+      const owned = await acquisition?.then(result => result.created, () => false) ?? false
       acquisition = undefined
+      if (!owned) {
+        return
+      }
       const result = await runDocker(['rm', '--force', '--volumes', name])
       // A container that was never there is the state `remove` promises, so that one result
       // is success. Anything else leaked a container, and a silent resolve would hide it.
