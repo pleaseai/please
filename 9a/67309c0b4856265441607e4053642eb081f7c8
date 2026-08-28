@@ -1,0 +1,41 @@
+packages/core/test/index.test.ts
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 3
+docs/project-layout.md
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 4,8,192
+CLAUDE.md
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 9,14
+packages/core/src/index.ts
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 2
+packages/core/package.json
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 2
+packages/core/test/sandbox/harness/provider.test.ts
+  s_b0e884b36cda1b::t_4b4f8f10e86c2e 35
+packages/core/test/sandbox/docker/harness-integration.test.ts
+  s_b0e884b36cda1b::t_4b4f8f10e86c2e 46
+README.ko.md
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 73,81-83,125
+README.md
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 81,89-91,135
+packages/core/src/sandbox/harness/provider.ts
+  s_b0e884b36cda1b::t_4b4f8f10e86c2e 28,45
+packages/core/src/sandbox/docker/index.ts
+  s_b0e884b36cda1b::t_d10d83a0ef1c3f 2,6
+bun.lock
+  s_b0e884b36cda1b::t_043d48e8c81fce 21,204
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "9a67309c0b4856265441607e4053642eb081f7c8",
+  "prompts": {},
+  "sessions": {
+    "s_b0e884b36cda1b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "5617fa9b-ef55-44c4-9fba-835a4e4a6146",
+        "model": "unknown"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
