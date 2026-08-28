@@ -89,38 +89,58 @@ export interface MicrosandboxSandboxOptions extends Omit<MicroVmOptions, 'image'
 }
 
 /**
- * The same handle, with every call that reaches the runtime held behind an in-flight teardown.
+ * The same handle, with every call that *acquires* held behind whatever teardown is in flight.
  *
  * A sandbox id resolves to a sandbox *name*, and acquiring a name adopts whatever the runtime's
  * database already has under it — which is the property that makes an id resumable across host
  * processes, and the reason a replacement handle is not safely independent of the one being torn
  * down. Without this gate, a `session(id)` arriving during a `destroy(id)` builds a fresh handle,
- * adopts the very VM that destroy is removing, and is left holding a machine that is about to be
- * killed underneath it.
+ * adopts the very VM that destroy is removing, and is left holding a machine about to be killed
+ * underneath it.
+ *
+ * **The map is read at call time, not captured at construction.** A teardown that starts after
+ * this handle was built is exactly as dangerous as one that was already running, and the loop is
+ * what covers a second destroy replacing the first while an acquire is suspended on it. Same
+ * shape as `ready()` in `../local/root.ts`, for the same reason.
+ *
+ * **`remove` is deliberately not gated.** Two teardowns for one name are removing the same
+ * machine, which is idempotent rather than a race — and gating it would make a destroy wait on
+ * the teardown it is itself about to publish, which is a deadlock, not a guard.
  *
  * The teardown's own failure is swallowed here on purpose: it belongs to the caller that asked
  * for the destroy. A caller that merely queued behind it wants the timing, not the error — and a
  * failed teardown that poisoned every later session would turn one bad destroy into a permanently
  * unusable sandbox id.
  *
- * `../local/root.ts` states the same rule for a directory rather than a VM.
+ * What this does **not** cover is an acquire that was already past the gate when a destroy began.
+ * Nothing short of a lock inside the handle would, and that is the ordinary use-after-destroy any
+ * backend has: the contract does not promise a session survives being torn down under it.
  */
-function gatedOn(teardown: Promise<void>, handle: MicroVmHandle): MicroVmHandle {
-  const settled = teardown.catch(() => undefined)
+function gatedOn(
+  teardowns: ReadonlyMap<string, Promise<void>>,
+  sandboxId: string,
+  handle: MicroVmHandle,
+): MicroVmHandle {
+  const settled = async (): Promise<void> => {
+    for (;;) {
+      const pending = teardowns.get(sandboxId)
+      if (pending === undefined) {
+        return
+      }
+      await pending.catch(() => undefined)
+    }
+  }
   return {
     name: handle.name,
     ready: async () => {
-      await settled
+      await settled()
       return handle.ready()
     },
     peek: async () => {
-      await settled
+      await settled()
       return handle.peek()
     },
-    remove: async () => {
-      await settled
-      return handle.remove()
-    },
+    remove: () => handle.remove(),
   }
 }
 
@@ -150,8 +170,9 @@ export function createMicrosandboxSandbox(
       env: sandboxEnv(options.env),
       ...(options.namePrefix === undefined ? {} : { prefix: options.namePrefix }),
     })
-    const teardown = teardowns.get(sandboxId)
-    const handle = teardown === undefined ? created : gatedOn(teardown, created)
+    // Gated unconditionally: the gate reads the teardown map when it is called, so a handle
+    // built while nothing was being torn down still waits out a destroy that starts later.
+    const handle = gatedOn(teardowns, sandboxId, created)
     handles.set(sandboxId, handle)
     return handle
   }
@@ -188,8 +209,8 @@ export function createMicrosandboxSandbox(
         if (handles.get(sandboxId) === handle) {
           handles.delete(sandboxId)
         }
-        // Published while it runs, so the replacement handle a concurrent `session(id)` builds
-        // waits it out instead of adopting the VM it is removing — see {@link gatedOn}. Evicting
+        // Published while it runs, so any handle for this id — this one's replacement included —
+        // waits it out instead of adopting the VM it is removing. See {@link gatedOn}. Evicting
         // early without this trades one race for another: `../just-bash` needs no equivalent,
         // because a new just-bash handle is an independent virtual filesystem rather than a
         // second claim on the same named machine.

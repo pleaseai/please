@@ -189,15 +189,20 @@ function toHandle(child: ReturnType<typeof spawnInContainer>): MicroExecHandle {
  */
 function spawn(container: string, cmd: string, options: FakeExecOptions): MicroExecHandle {
   const controller = new AbortController()
-  if (options.budgetMs !== undefined) {
-    const timer = setTimeout(() => controller.abort(), options.budgetMs)
-    timer.unref()
-  }
-  return toHandle(spawnInContainer(container, [cmd, ...options.argv], {
+  const child = spawnInContainer(container, [cmd, ...options.argv], {
     ...(options.workDir === undefined ? {} : { cwd: options.workDir }),
     ...(options.environment === undefined ? {} : { env: options.environment }),
     abortSignal: controller.signal,
-  }))
+  })
+  if (options.budgetMs !== undefined) {
+    const timer = setTimeout(() => controller.abort(), options.budgetMs)
+    timer.unref()
+    // Cleared on exit, the way {@link runExec} clears its own in a `finally`. A stream that ends
+    // first would otherwise leave a timer for the rest of the budget, whose only remaining act
+    // is to abort a controller nothing is listening to.
+    void child.exited.finally(() => clearTimeout(timer))
+  }
+  return toHandle(child)
 }
 
 /**
