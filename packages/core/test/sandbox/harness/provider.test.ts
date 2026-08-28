@@ -32,7 +32,7 @@ describe('createHarnessSandboxProvider', () => {
   })
 
   it('names itself after the backend it was handed', () => {
-    expect(provider().provider.providerId).toBe('pleaseai-fake')
+    expect(provider().provider.providerId).toBe('pleasedev-fake')
   })
 
   it('takes the provider id the caller chose', () => {

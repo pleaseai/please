@@ -1,7 +1,7 @@
 # The dev TUI
 
 > **Status: half decided, half blocked.** The boot chrome described below is implemented and
-> tested in `@pleaseai/cli` (`packages/cli/src/ui`). The `dev` command it exists for is **not**,
+> tested in `@pleasedev/cli` (`packages/cli/src/ui`). The `dev` command it exists for is **not**,
 > because the interactive UI needs two things from `defineAgent` that `defineAgent` does not
 > expose yet. Those are named in [What the interactive UI needs](#what-the-interactive-ui-needs),
 > and they are API decisions, not omissions to be quietly filled in.
@@ -58,11 +58,11 @@ grapheme splitter by `Intl.Segmenter`, which Bun ships.
 
 ## Where it lives
 
-A new workspace package, `@pleaseai/cli` (`packages/cli`), rather than a `@pleaseai/core` subpath.
+A new workspace package, `@pleasedev/cli` (`packages/cli`), rather than a `@pleasedev/core` subpath.
 
 `core`'s subpath rule exists to keep host-only code out of a bundle that cannot run it — the
-docker backend spawns a CLI, so it sits behind `@pleaseai/core/sandbox/docker` and a Worker
-bundling `@pleaseai/core` never pulls it in. A command-line program is not a subpath case of that
+docker backend spawns a CLI, so it sits behind `@pleasedev/core/sandbox/docker` and a Worker
+bundling `@pleasedev/core` never pulls it in. A command-line program is not a subpath case of that
 rule; it is the other side of it. It has a `bin`, it owns `process.stdout`, it reads a config file
 off disk, and none of that is runtime-neutral in any sense the rule was written for.
 
