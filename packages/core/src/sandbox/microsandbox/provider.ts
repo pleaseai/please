@@ -88,10 +88,47 @@ export interface MicrosandboxSandboxOptions extends Omit<MicroVmOptions, 'image'
   namePrefix?: string
 }
 
+/**
+ * The same handle, with every call that reaches the runtime held behind an in-flight teardown.
+ *
+ * A sandbox id resolves to a sandbox *name*, and acquiring a name adopts whatever the runtime's
+ * database already has under it — which is the property that makes an id resumable across host
+ * processes, and the reason a replacement handle is not safely independent of the one being torn
+ * down. Without this gate, a `session(id)` arriving during a `destroy(id)` builds a fresh handle,
+ * adopts the very VM that destroy is removing, and is left holding a machine that is about to be
+ * killed underneath it.
+ *
+ * The teardown's own failure is swallowed here on purpose: it belongs to the caller that asked
+ * for the destroy. A caller that merely queued behind it wants the timing, not the error — and a
+ * failed teardown that poisoned every later session would turn one bad destroy into a permanently
+ * unusable sandbox id.
+ *
+ * `../local/root.ts` states the same rule for a directory rather than a VM.
+ */
+function gatedOn(teardown: Promise<void>, handle: MicroVmHandle): MicroVmHandle {
+  const settled = teardown.catch(() => undefined)
+  return {
+    name: handle.name,
+    ready: async () => {
+      await settled
+      return handle.ready()
+    },
+    peek: async () => {
+      await settled
+      return handle.peek()
+    },
+    remove: async () => {
+      await settled
+      return handle.remove()
+    },
+  }
+}
+
 export function createMicrosandboxSandbox(
   options: MicrosandboxSandboxOptions = {},
 ): SandboxProvider {
   const handles = new Map<string, MicroVmHandle>()
+  const teardowns = new Map<string, Promise<void>>()
   // Copied, not aliased: the map decides both what the VM publishes at build time and what
   // `portEndpoint` answers afterwards. Holding the caller's own map would let a mutation after
   // the VM is up change the answer without changing the mapping, handing back a URL for a host
@@ -113,8 +150,10 @@ export function createMicrosandboxSandbox(
       env: sandboxEnv(options.env),
       ...(options.namePrefix === undefined ? {} : { prefix: options.namePrefix }),
     })
-    handles.set(sandboxId, created)
-    return created
+    const teardown = teardowns.get(sandboxId)
+    const handle = teardown === undefined ? created : gatedOn(teardown, created)
+    handles.set(sandboxId, handle)
+    return handle
   }
 
   const portEndpoint = async (
@@ -149,7 +188,18 @@ export function createMicrosandboxSandbox(
         if (handles.get(sandboxId) === handle) {
           handles.delete(sandboxId)
         }
-        await created.destroy()
+        // Published while it runs, so the replacement handle a concurrent `session(id)` builds
+        // waits it out instead of adopting the VM it is removing — see {@link gatedOn}. Evicting
+        // early without this trades one race for another: `../just-bash` needs no equivalent,
+        // because a new just-bash handle is an independent virtual filesystem rather than a
+        // second claim on the same named machine.
+        const teardown = created.destroy().finally(() => {
+          if (teardowns.get(sandboxId) === teardown) {
+            teardowns.delete(sandboxId)
+          }
+        })
+        teardowns.set(sandboxId, teardown)
+        await teardown
       },
     }
   }

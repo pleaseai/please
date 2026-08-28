@@ -179,6 +179,28 @@ function toHandle(child: ReturnType<typeof spawnInContainer>): MicroExecHandle {
 }
 
 /**
+ * Start one streamed exec, honouring the options the builder recorded.
+ *
+ * The deadline is applied here as well as in {@link runExec}, and not because anything in this
+ * backend sets one on a stream today — `spawnArgv` is only ever reached from `process-logs.ts`,
+ * which passes no options at all. A builder that records a timeout and silently drops it is a
+ * trap for the caller that does set one: a `tail -f` given a budget would run until the file it
+ * follows ends, which for a `follow` read is never.
+ */
+function spawn(container: string, cmd: string, options: FakeExecOptions): MicroExecHandle {
+  const controller = new AbortController()
+  if (options.budgetMs !== undefined) {
+    const timer = setTimeout(() => controller.abort(), options.budgetMs)
+    timer.unref()
+  }
+  return toHandle(spawnInContainer(container, [cmd, ...options.argv], {
+    ...(options.workDir === undefined ? {} : { cwd: options.workDir }),
+    ...(options.environment === undefined ? {} : { env: options.environment }),
+    abortSignal: controller.signal,
+  }))
+}
+
+/**
  * The guest filesystem, over `docker exec` rather than a napi channel.
  *
  * Every failure mode the backend depends on is reproduced, because each one is a branch it takes:
@@ -254,17 +276,8 @@ function fakeSandbox(container: string): MicroSandbox {
     name: container,
     exec: (cmd, args) => runExec(container, cmd, fromArgs(args)),
     execWith: (cmd, configure) => runExec(container, cmd, withOptions(configure)),
-    execStream: async (cmd, args) => {
-      const options = fromArgs(args)
-      return toHandle(spawnInContainer(container, [cmd, ...options.argv]))
-    },
-    execStreamWith: async (cmd, configure) => {
-      const options = withOptions(configure)
-      return toHandle(spawnInContainer(container, [cmd, ...options.argv], {
-        ...(options.workDir === undefined ? {} : { cwd: options.workDir }),
-        ...(options.environment === undefined ? {} : { env: options.environment }),
-      }))
-    },
+    execStream: async (cmd, args) => spawn(container, cmd, fromArgs(args)),
+    execStreamWith: async (cmd, configure) => spawn(container, cmd, withOptions(configure)),
     fs: () => fakeFs(container),
     kill: async () => {
       await runDocker(['rm', '--force', container])
