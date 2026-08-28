@@ -14,8 +14,8 @@
  */
 import type { ProcessLogCursor, ProcessLogEvent, SandboxProvider } from '../../../src/sandbox/contract'
 import { Buffer } from 'node:buffer'
-import { mkdtemp, rm, stat } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises'
+import { constants, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
@@ -504,12 +504,82 @@ suite('local sandbox backend', () => {
     expect((await neighbour.exists('nested/hello.txt')).exists).toBe(true)
   })
 
+  it('leaves no phantom behind when the spawn itself never happens', async () => {
+    // Its own sandbox, so "nothing is listed" is the whole assertion rather than a diff against
+    // whatever the other tests in this file left behind.
+    const session = sandboxes.session(`spawn-fail-${crypto.randomUUID().slice(0, 8)}`)
+
+    // `Bun.spawn` throws outright for a working directory the host does not have, and the
+    // journal is already on disk by then. Guarding only the start *confirmation* would leave a
+    // journal nothing can resolve, which every later listing reports as a process permanently
+    // in the `error` state.
+    await expect(session.exec(['echo', 'hi'], { cwd: 'no/such/directory' })).rejects.toThrow()
+    const listed = await session.listProcesses()
+    await session.destroy()
+
+    expect(listed).toEqual([])
+  })
+
+  it('records a signal whose number is not the same on every platform', async () => {
+    const session = sandboxes.session(sandboxId)
+    const signal = constants.signals.SIGUSR1
+
+    // `SIGUSR1` is 10 on Linux and 30 on macOS. A wrapper carrying either number as a literal
+    // records one while the shell exits with `128 +` the other, and the two are then found to
+    // disagree — so a signalled process is reported as having merely returned 158.
+    const proc = await session.exec(['sleep', '30'])
+    await proc.kill(signal)
+    const exit = await proc.waitForExit()
+
+    expect(exit.code).toBe(128 + signal)
+    expect(exit.signal).toBe(signal)
+  }, 20_000)
+
+  it('leaves no watchdog sleeping behind a command that finished early', async () => {
+    const session = sandboxes.session(sandboxId)
+    // Distinctive enough to find in the host's process table, and long enough that a leaked one
+    // would still be there — which is the point: a turn is given an hour-scale budget, so a
+    // watchdog that outlives its command leaks for an hour per quick command.
+    const budget = 987_654
+
+    const proc = await session.exec(['true'], { timeout: budget })
+    await proc.waitForExit()
+    await Bun.sleep(200)
+
+    const nap = `sleep ${(budget / 1000).toFixed(3)}`
+    // Filtered before asserting: a failure should print the leaked line, not the host's whole
+    // process table.
+    const leaked = Bun.spawnSync(['ps', '-A', '-o', 'args=']).stdout.toString().split('\n').filter(line => line.includes(nap))
+
+    expect(leaked).toEqual([])
+  }, 20_000)
+
+  it('does not report a journal whose wrapper never ran as a failed process', async () => {
+    const session = sandboxes.session(sandboxId)
+    await session.exists('.')
+    // Exactly the state `prepareJournal` leaves behind between writing the journal and the
+    // wrapper's first line: a command on disk with nothing running behind it. Reported by state
+    // alone it reads as `error`, which would tell a caller that a process still starting had
+    // already failed — and a `listProcesses()` racing an in-flight `exec()` sees this window.
+    const orphanId = crypto.randomUUID()
+    const dir = join(root, sandboxDirName(sandboxId), 'journal', orphanId)
+    await mkdir(dir, { recursive: true })
+    await Bun.write(join(dir, 'meta'), JSON.stringify({
+      id: orphanId,
+      command: ['sleep', '30'],
+      startedAt: new Date().toISOString(),
+    }))
+
+    expect(await session.getProcess(orphanId)).toBeNull()
+    expect((await session.listProcesses()).map(entry => entry.id)).not.toContain(orphanId)
+  })
+
   it('destroys idempotently', async () => {
     const session = sandboxes.session(`twice-${crypto.randomUUID().slice(0, 8)}`)
     await session.exists('.')
 
     await session.destroy()
 
-    expect(session.destroy()).resolves.toBeUndefined()
+    await expect(session.destroy()).resolves.toBeUndefined()
   })
 })

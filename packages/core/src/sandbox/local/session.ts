@@ -14,7 +14,7 @@ import type {
 } from '../contract'
 import type { JournalMeta, JournalPaths } from './journal'
 import type { SandboxRoot } from './root'
-import { mkdir, readdir } from 'node:fs/promises'
+import { mkdir, readdir, stat } from 'node:fs/promises'
 import { isAbsolute, resolve } from 'node:path'
 import { createLocalFiles } from './files'
 import { journalPaths, wrapperArgv } from './journal'
@@ -58,6 +58,11 @@ async function waitForStart(paths: JournalPaths, processId: string): Promise<voi
  * it. In the window this exists for, the wrapper has not written a pid yet — there is nothing
  * to kill, and the marker is the only thing that can stop it launching at all. Deleting the
  * directory here would delete the one instruction it is waiting to read.
+ *
+ * It covers a spawn that never happened at all — a `cwd` the host does not have, a `sh` it
+ * cannot posix_spawn — for the second half of the same reason: the journal is already on disk
+ * by then, and a journal with no wrapper behind it is what `listProcesses()` would otherwise
+ * report forever as a process in the `error` state.
  */
 async function abandonStartedProcess(paths: JournalPaths): Promise<void> {
   try {
@@ -117,41 +122,68 @@ async function exec(
 
   await prepareJournal(paths, meta)
 
-  const child = Bun.spawn(
-    wrapperArgv({
-      paths,
-      command,
-      ...(execOptions.timeout === undefined ? {} : { timeout: execOptions.timeout }),
-    }),
-    {
-      cwd,
-      env: execOptions.env === undefined ? options.env : { ...options.env, ...execOptions.env },
-      stdin: 'ignore',
-      // The wrapper redirects the command's own streams into the journal, so nothing here has
-      // an inherited pipe to drain — and a pipe the parent held would tie the process's life
-      // to the parent's, which is the thing the journal exists to avoid.
-      stdout: 'ignore',
-      stderr: 'ignore',
-      // Leads its own process group, which is what makes the wrapper's group kill reach the
-      // command's tree instead of the caller's. `setsid` buys this in the Docker backend.
-      detached: true,
-    },
-  )
-  // Detach it from this process's event loop as well: a sandbox process outliving its caller
-  // is the contract, and an unreffed child is what keeps the caller free to exit.
-  child.unref()
-
-  try {
+  const spawnAndConfirm = async (): Promise<void> => {
+    const child = Bun.spawn(
+      wrapperArgv({
+        paths,
+        command,
+        ...(execOptions.timeout === undefined ? {} : { timeout: execOptions.timeout }),
+      }),
+      {
+        cwd,
+        env: execOptions.env === undefined ? options.env : { ...options.env, ...execOptions.env },
+        stdin: 'ignore',
+        // The wrapper redirects the command's own streams into the journal, so nothing here has
+        // an inherited pipe to drain — and a pipe the parent held would tie the process's life
+        // to the parent's, which is the thing the journal exists to avoid.
+        stdout: 'ignore',
+        stderr: 'ignore',
+        // Leads its own process group, which is what makes the wrapper's group kill reach the
+        // command's tree instead of the caller's. `setsid` buys this in the Docker backend.
+        detached: true,
+      },
+    )
+    // Detach it from this process's event loop as well: a sandbox process outliving its caller
+    // is the contract, and an unreffed child is what keeps the caller free to exit.
+    child.unref()
     await waitForStart(paths, processId)
   }
+
+  try {
+    // The spawn is inside the guard, not only the wait. `Bun.spawn` throws outright for a `cwd`
+    // the host does not have, and the journal is already on disk by then — so without this the
+    // failed call would leave a journal nothing can ever resolve, which every later
+    // `listProcesses()` reports as a process permanently in the `error` state.
+    await spawnAndConfirm()
+  }
   catch (cause) {
-    // The detached wrapper may be running even though its journal never became readable in
+    // The detached wrapper may also be running even though its journal never became readable in
     // time. Rejecting without this would return no handle for a live process — nothing could
     // ever kill it, and nothing could ever read it.
     await abandonStartedProcess(paths)
     throw cause
   }
   return createProcessHandle({ processId, paths, command })
+}
+
+/**
+ * Whether the wrapper behind this journal ever actually ran.
+ *
+ * Discovery is gated on the wrapper's own record — a pid, or an exit for a command that
+ * finished before anything read it — rather than on the journal directory existing. The two
+ * are not the same here the way they are in `../docker`, whose wrapper creates its own
+ * directory: `prepareJournal` writes `meta` from the host *before* the spawn, so between that
+ * write and the wrapper's first line the journal is a directory with a command in it and
+ * nothing behind it. Reported by state alone that reads as `error`/`no_exit_record`, which
+ * would tell a caller a perfectly healthy process had failed — a `listProcesses()` racing an
+ * `exec()` that is still starting is enough to see it.
+ *
+ * A process not yet listed is the honest answer for that window: `exec` has not returned a
+ * handle for it either. And nothing is hidden permanently — a wrapper that ran writes its pid
+ * within milliseconds, and one that never ran is what {@link abandonStartedProcess} marks.
+ */
+function hasLaunched(state: { pid?: number, exit?: unknown }): boolean {
+  return state.pid !== undefined || state.exit !== undefined
 }
 
 async function getProcess(
@@ -164,15 +196,14 @@ async function getProcess(
     return null
   }
   const paths = journalPaths(options.root.journalRoot, processId)
-  const [exists, abandoned] = await Promise.all([
-    Bun.file(paths.meta).exists(),
-    Bun.file(paths.abandon).exists(),
-  ])
-  if (!exists || abandoned) {
+  if (await Bun.file(paths.abandon).exists()) {
     return null
   }
 
   const state = await readJournalState(paths)
+  if (!hasLaunched(state)) {
+    return null
+  }
   return createProcessHandle({
     processId,
     paths,
@@ -205,6 +236,9 @@ async function listProcesses(options: LocalSessionOptions): Promise<ProcessStatu
       return undefined
     }
     const state = await readJournalState(paths)
+    if (!hasLaunched(state)) {
+      return undefined
+    }
     return toProcessStatus(id, state, state.meta?.command ?? UNKNOWN_COMMAND)
   }))
 
@@ -235,16 +269,24 @@ export function createLocalSession(options: LocalSessionOptions): SandboxSession
     exists: async (path) => {
       await root.ready()
       const resolved = isAbsolute(path) ? path : resolve(root.workDir, path)
-      return { exists: await Bun.file(resolved).exists() || await isDirectory(resolved) }
+      return { exists: await pathExists(resolved) }
     },
     destroy: () => root.remove(),
   }
 }
 
-/** `Bun.file(...).exists()` answers for files only, and a caller asking about a path means both. */
-async function isDirectory(path: string): Promise<boolean> {
+/**
+ * Whether anything at all is at the path.
+ *
+ * `stat` rather than `Bun.file(...).exists()`, which answers for files only, and rather than a
+ * `readdir` probe for the directory half: listing a directory to decide whether it is there
+ * reads every entry in it to answer a question about one path, and it answers *no* for a
+ * directory the caller may traverse but not list — a path that plainly exists.
+ */
+async function pathExists(path: string): Promise<boolean> {
   try {
-    return (await readdir(path)) !== undefined
+    await stat(path)
+    return true
   }
   catch {
     return false

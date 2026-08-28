@@ -228,18 +228,6 @@ export interface SandboxFileContent {
 }
 
 /**
- * Reading and writing files in the sandbox.
- *
- * Split out because it arrived for one caller — the AI SDK harness session, whose
- * `SandboxSession` requires full file I/O — and the contract's own note says to widen only
- * when a caller appears. It is declared in *Cloudflare's* shape (positional path,
- * encoding-selected overloads) rather than the harness's (options objects, three read
- * variants), which keeps the property this package is built on: `@cloudflare/sandbox`'s
- * client satisfies the contract with no mapping layer, and a non-Cloudflare backend pays
- * the mapping cost. The harness's own shape is a further translation, and it belongs in the
- * harness provider — written once, over the contract, for every backend at once.
- */
-/**
  * A read named a path the sandbox does not have.
  *
  * On the contract rather than in each backend, for the reason {@link SandboxWaitTimeoutError}
@@ -265,10 +253,29 @@ export class SandboxFileNotFoundError extends Error {
   }
 }
 
+/**
+ * Reading and writing files in the sandbox.
+ *
+ * Split out because it arrived for one caller — the AI SDK harness session, whose
+ * `SandboxSession` requires full file I/O — and the contract's own note says to widen only
+ * when a caller appears. It is declared in *Cloudflare's* shape (positional path,
+ * encoding-selected overloads) rather than the harness's (options objects, three read
+ * variants), which keeps the property this package is built on: `@cloudflare/sandbox`'s
+ * client satisfies the contract with no mapping layer, and a non-Cloudflare backend pays
+ * the mapping cost. The harness's own shape is a further translation, and it belongs in the
+ * harness provider — written once, over the contract, for every backend at once.
+ */
 export interface SandboxFiles {
   /**
-   * Rejects with {@link SandboxFileNotFoundError} when the path does not exist; callers wanting
-   * absence-as-value pair it with `exists`.
+   * Rejects when the path does not exist; callers wanting absence-as-value pair it with
+   * `exists`.
+   *
+   * A backend SHOULD reject with {@link SandboxFileNotFoundError}, and both backends here do —
+   * but the promise is the rejection, not its type. A vendor client satisfies this contract
+   * structurally and throws whatever it throws, so a caller that must handle every backend
+   * cannot switch on the class alone. That is why `../harness/files.ts` decides absence by
+   * re-checking `exists` rather than by matching an error, and why its note saying so is not in
+   * conflict with the class being named here.
    */
   readFile: ((path: string, options: { encoding: 'none' }) => Promise<SandboxFileStream>)
     & ((path: string, options?: { encoding?: SandboxFileEncoding }) => Promise<SandboxFileContent>)

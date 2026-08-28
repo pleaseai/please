@@ -35,6 +35,7 @@
  * through `docker exec`; here the arguments travel beside the script instead of inside it.
  */
 import type { SandboxCommand } from '../contract'
+import { constants } from 'node:os'
 import { join } from 'node:path'
 
 export interface JournalPaths {
@@ -81,17 +82,18 @@ export interface JournalMeta {
 /**
  * Catchable signals the wrapper survives, with the number a POSIX shell reports for them.
  *
+ * The numbers are read from the *host's* own signal table rather than written down, because
+ * they are not portable: `SIGUSR1` is 10 on Linux and 30 on macOS, so a literal 10 would be
+ * recorded for a process the shell exits with `128 + 30`, {@link reconcileSignal} would find
+ * the two disagree, and a signalled process would be reported as having merely returned 158.
+ * The wrapper runs on this host, so this host's table is the right one.
+ *
  * `SIGKILL` is deliberately absent: it cannot be trapped, so a `kill -9` still produces the
  * no-exit-record state — correctly, because nothing observed the process finishing.
  */
-const RECORDED_SIGNALS: ReadonlyArray<readonly [name: string, number: number]> = [
-  ['HUP', 1],
-  ['INT', 2],
-  ['QUIT', 3],
-  ['USR1', 10],
-  ['USR2', 12],
-  ['TERM', 15],
-]
+const RECORDED_SIGNALS: ReadonlyArray<readonly [name: string, number: number]>
+  = (['HUP', 'INT', 'QUIT', 'USR1', 'USR2', 'TERM'] as const)
+    .map(name => [name, constants.signals[`SIG${name}`]] as const)
 
 /**
  * Seconds the escalation waits after a timeout's `SIGTERM` before forcing the group down.
@@ -101,8 +103,12 @@ const RECORDED_SIGNALS: ReadonlyArray<readonly [name: string, number: number]> =
  */
 const KILL_GRACE_SECONDS = '3'
 
+/** Read from the host's table for the reason {@link RECORDED_SIGNALS} gives. */
+const SIGTERM = constants.signals.SIGTERM
+const SIGKILL = constants.signals.SIGKILL
+
 /** What the journal records for a group SIGKILLed by the escalation: the shell's `128 + 9`. */
-const SIGKILL_EXIT_CODE = '137'
+const SIGKILL_EXIT_CODE = String(128 + SIGKILL)
 
 const SIGNAL_NAMES = RECORDED_SIGNALS.map(([name]) => name).join(' ')
 
@@ -143,7 +149,7 @@ export const WRAPPER_SCRIPT: string = [
   // The exit record, not a pid check: a reaped pid can be reused by then, and this file is the
   // journal's own answer to "is it over".
   '  if [ -e "$dir/exit" ] ; then return 0 ; fi',
-  '  printf %s 9 > "$dir/signal"',
+  `  printf %s ${SIGKILL} > "$dir/signal"`,
   // Written *before* the kill, which is what lets the kill be a plain group kill. The wrapper
   // dies with the group and never reaches its own `echo`, so this line is the exit record.
   `  echo ${SIGKILL_EXIT_CODE} > "$dir/exit"`,
@@ -152,7 +158,7 @@ export const WRAPPER_SCRIPT: string = [
   '',
   'on_signal() {',
   '  printf %s "$1" > "$dir/signal"',
-  '  if [ "$1" = 15 ] && [ -e "$dir/timeout" ] ; then',
+  `  if [ "$1" = ${SIGTERM} ] && [ -e "$dir/timeout" ] ; then`,
   '    escalate &',
   '    escalator=$!',
   '  fi',
@@ -167,7 +173,21 @@ export const WRAPPER_SCRIPT: string = [
   // exit code, and signals the whole group so grandchildren go with it. It then dies of its
   // own signal; the wrapper's TERM handler is what carries the escalation on from here.
   'if [ -n "$budget" ] ; then',
-  '  ( sleep "$budget" ; : > "$dir/timeout" ; kill -TERM "-$wrapper" 2>/dev/null ) &',
+  // The nap is the watchdog's own child rather than the watchdog itself, so that standing the
+  // watchdog down below can take the `sleep` with it. Killing the subshell alone leaves the
+  // `sleep` orphaned and running out the whole budget — hours, for the timeout a long turn is
+  // given — after the command it was watching has already exited and been reaped.
+  '  (',
+  //   A subshell inherits the wrapper's trap *actions*, so this replaces `on_signal` for the
+  //   watchdog: a TERM here is the wrapper saying the deadline is no longer needed, which is a
+  //   different thing from the TERM the watchdog itself sends the group.
+  '    trap \'kill -9 "$nap" 2>/dev/null ; exit 0\' TERM',
+  '    sleep "$budget" &',
+  '    nap=$!',
+  '    wait "$nap"',
+  '    : > "$dir/timeout"',
+  '    kill -TERM "-$wrapper" 2>/dev/null',
+  '  ) &',
   '  watchdog=$!',
   'fi',
   '',
@@ -178,7 +198,9 @@ export const WRAPPER_SCRIPT: string = [
   '  status=$?',
   'done',
   '',
-  'if [ -n "$watchdog" ] ; then kill -9 "$watchdog" 2>/dev/null || true ; fi',
+  // TERM rather than KILL, because the watchdog has a disposition for it that also reaps its
+  // nap. A KILL here would be delivered to the subshell alone.
+  'if [ -n "$watchdog" ] ; then kill -TERM "$watchdog" 2>/dev/null || true ; fi',
   // Best effort only: an escalation that outlives this finds the exit record below and returns
   // without touching anything.
   'if [ -n "$escalator" ] ; then kill -9 "$escalator" 2>/dev/null || true ; fi',

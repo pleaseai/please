@@ -128,6 +128,6 @@ suite('local backend through the harness provider', () => {
 
     await session.destroy()
 
-    expect(session.destroy()).resolves.toBeUndefined()
+    await expect(session.destroy()).resolves.toBeUndefined()
   })
 })

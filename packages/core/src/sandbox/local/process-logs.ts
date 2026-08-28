@@ -24,6 +24,13 @@ const POLL_INTERVAL_MS = 50
  * A replay of a long-running turn's output would otherwise arrive as a single event holding
  * the whole file, which defeats every caller that is streaming precisely so it does not have
  * to hold one.
+ *
+ * **It bounds the event, not the queue.** The pump runs from `start` and enqueues without
+ * consulting `desiredSize`, so a replay a consumer reads slowly still buffers the whole file in
+ * the controller — as many 64 KiB events as it takes. `../docker` avoids that only incidentally,
+ * by reading through a `tail` pipe the kernel throttles. Making this backend apply real
+ * backpressure means driving the pump from `pull`, which changes when it runs; it has not been
+ * done, and this note is here so the bound above is not mistaken for it.
  */
 const MAX_CHUNK_BYTES = 64 * 1024
 
