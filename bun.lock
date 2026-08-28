@@ -17,6 +17,16 @@
         "typescript": "^6",
       },
     },
+    "packages/cli": {
+      "name": "@pleaseai/cli",
+      "version": "0.0.0",
+      "dependencies": {
+        "picocolors": "^1.1.1",
+      },
+      "devDependencies": {
+        "typescript": "^6",
+      },
+    },
     "packages/core": {
       "name": "@pleaseai/core",
       "version": "0.0.0",
@@ -200,6 +210,8 @@
     "@ota-meshi/ast-token-store": ["@ota-meshi/ast-token-store@0.3.0", "", {}, "sha512-XRO0zi2NIUKq2lUk3T1ecFSld1fMWRKE6naRFGkgkdeosx7IslyUKNv5Dcb5PJTja9tHJoFu0v/7yEpAkrkrTg=="],
 
     "@pkgr/core": ["@pkgr/core@0.3.6", "", {}, "sha512-SEeaJLb3qBNF/OaXnaR1NmmBbFYk1zC0ZH/52fATcRPLFg/p791YrcyFFy44Bo9sLaGuSuLp5Q6axbb/O+v/RA=="],
+
+    "@pleaseai/cli": ["@pleaseai/cli@workspace:packages/cli"],
 
     "@pleaseai/core": ["@pleaseai/core@workspace:packages/core"],
 

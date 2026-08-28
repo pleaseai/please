@@ -138,9 +138,12 @@ packages/
       harness/               # HarnessV1SandboxProvider over that contract
       docker/                # local Docker backend (host-only)
     scripts/                 # probes that measure the runtime rather than assume it
+  cli/                       # @pleaseai/cli — unreleased; has no command yet
+    src/ui/                  # the boot chrome `please dev` draws before the session starts
 docs/
   prior-art.md               # what eve, flue and the AI SDK harnesses already do
   project-layout.md          # a proposed layout, and the open questions it waits on
+  dev-tui.md                 # `please dev`: what is decided, and what it waits on
 ```
 
 The three probes under `packages/core/scripts/` are runnable, and each answers a question the docs
@@ -160,6 +163,10 @@ from what exists rather than from recollection.
 
 [`docs/project-layout.md`](docs/project-layout.md) is the first argument built on that record: a
 proposed layout, what the contract already decides for us, and the questions still open.
+
+[`docs/dev-tui.md`](docs/dev-tui.md) is the second: how an interactive `please dev` divides the
+terminal between [`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui) and a boot
+chrome ported from eve, and which `defineAgent` decisions the command is waiting on.
 
 ## Contributing
 

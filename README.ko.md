@@ -128,9 +128,12 @@ packages/
       harness/               # 그 계약 위의 HarnessV1SandboxProvider
       docker/                # 로컬 Docker 백엔드 (호스트 전용)
     scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
+  cli/                       # @pleaseai/cli — 아직 배포하지 않는다. 명령어가 없다
+    src/ui/                  # 세션이 시작되기 전에 `please dev`가 그리는 부팅 크롬
 docs/
   prior-art.md               # eve, flue, AI SDK 하네스가 이미 하고 있는 것
   project-layout.md          # 레이아웃 제안과, 그것이 기다리는 열린 질문들
+  dev-tui.md                 # `please dev`: 정해진 것과, 아직 기다리는 것
 ```
 
 `packages/core/scripts/` 아래 세 프로브는 실행할 수 있고, 각각 문서가 아니면 추측에 그쳤을 질문에
@@ -150,6 +153,10 @@ bun run packages/core/scripts/probe-permissions.ts        # Anthropic 자격 증
 
 [`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 첫 번째 논증이다. 제안 레이아웃,
 계약이 이미 우리 대신 정해 버린 것들, 그리고 아직 열려 있는 질문들.
+
+[`docs/dev-tui.md`](docs/dev-tui.md)은 두 번째다. 대화형 `please dev`가 터미널을
+[`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui)와 eve에서 이식한 부팅 크롬
+사이에 어떻게 나누는지, 그리고 그 명령어가 어떤 `defineAgent` 결정을 기다리고 있는지.
 
 ## 기여
 

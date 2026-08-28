@@ -19,3 +19,14 @@ the files that carry them:
     packages/core/src/sandbox/contract/**
     packages/core/src/sandbox/harness/**
     packages/core/test/sandbox/harness/**
+
+---
+
+This product includes software derived from the eve project
+(https://github.com/vercel/eve) by Vercel, Inc., licensed under the Apache
+License, Version 2.0. The derived portions are the terminal boot chrome — the
+palette and section rendering, the escape-sequence sanitizer, the grapheme-aware
+width measurement, the inline repaint engine, and the progress pulse — and are
+marked with an attribution header in the files that carry them:
+
+    packages/cli/src/ui/**
