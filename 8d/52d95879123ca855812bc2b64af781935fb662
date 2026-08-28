@@ -1,0 +1,29 @@
+packages/core/scripts/probe-permissions.ts
+  s_c37a26771f37f9::t_b944485ccdfaa4 153-162
+packages/core/src/sandbox/docker/provider.ts
+  s_c37a26771f37f9::t_1967e74fd3fc0f 29-47,60
+packages/core/test/sandbox/docker/backend.test.ts
+  s_c37a26771f37f9::t_9ee02c06cd8e89 269-280
+packages/core/src/sandbox/docker/index.ts
+  s_c37a26771f37f9::t_18aaecb4ad13b1 20
+packages/core/test/sandbox/docker/container-env.test.ts
+  s_c37a26771f37f9::t_18aaecb4ad13b1 1-24
+docs/project-layout.md
+  s_c37a26771f37f9::t_73244754dea16a 185-189
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "8d52d95879123ca855812bc2b64af781935fb662",
+  "prompts": {},
+  "sessions": {
+    "s_c37a26771f37f9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "dafe6735-dbfb-4a74-8911-687919002226",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
