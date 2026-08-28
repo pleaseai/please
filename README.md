@@ -90,6 +90,7 @@ One layer does exist, because it was the layer the open questions could not be a
 | `@pleaseai/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
 | `@pleaseai/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
 | `@pleaseai/core/sandbox/local` | a host-process backend — no daemon, no image, **and no isolation**. Host-only for the same reason |
+| `@pleaseai/core/sandbox/just-bash` | a virtual-shell backend over [`just-bash`](https://www.npmjs.com/package/just-bash) — no daemon, no image, no host process, and **no real binaries**. `just-bash` is an optional peer dependency |
 
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
@@ -139,6 +140,7 @@ packages/
       harness/               # HarnessV1SandboxProvider over that contract
       docker/                # local Docker backend (host-only)
       local/                 # host-process backend (host-only, unisolated)
+      just-bash/             # virtual-shell backend (no host process, no real binaries)
     scripts/                 # probes that measure the runtime rather than assume it
 docs/
   prior-art.md               # what eve, flue and the AI SDK harnesses already do

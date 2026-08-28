@@ -8,8 +8,8 @@
  * fail that — `instanceof` answers no across them — so the claim needs a test that compares the
  * exports themselves.
  *
- * Backend subpaths are imported for their *re-export*, not for their implementations; neither
- * import reaches a daemon or the filesystem, so this runs everywhere.
+ * Backend subpaths are imported for their *re-export*, not for their implementations; no import
+ * reaches a daemon, the filesystem, or the optional `just-bash` peer, so this runs everywhere.
  */
 import { describe, expect, it } from 'bun:test'
 import {
@@ -18,16 +18,18 @@ import {
   SandboxWaitTimeoutError,
 } from '../../../src/sandbox/contract'
 import { SandboxFileNotFoundError as dockerFileNotFound } from '../../../src/sandbox/docker'
+import { SandboxFileNotFoundError as justBashFileNotFound } from '../../../src/sandbox/just-bash'
 import { SandboxFileNotFoundError as localFileNotFound } from '../../../src/sandbox/local'
 
 describe('contract error identity', () => {
-  it('gives both backends the same missing-file class, not two of the same name', () => {
+  it('gives every backend the same missing-file class, not three of the same name', () => {
     expect(dockerFileNotFound).toBe(SandboxFileNotFoundError)
     expect(localFileNotFound).toBe(SandboxFileNotFoundError)
+    expect(justBashFileNotFound).toBe(SandboxFileNotFoundError)
   })
 
-  it('lets one catch match a missing file from either backend', () => {
-    for (const Raised of [dockerFileNotFound, localFileNotFound]) {
+  it('lets one catch match a missing file from any backend', () => {
+    for (const Raised of [dockerFileNotFound, localFileNotFound, justBashFileNotFound]) {
       expect(new Raised('/absent')).toBeInstanceOf(SandboxFileNotFoundError)
     }
   })

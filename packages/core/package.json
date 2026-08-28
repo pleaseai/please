@@ -24,6 +24,11 @@
       "types": "./dist/sandbox/harness/index.d.ts",
       "import": "./dist/sandbox/harness/index.js"
     },
+    "./sandbox/just-bash": {
+      "bun": "./src/sandbox/just-bash/index.ts",
+      "types": "./dist/sandbox/just-bash/index.d.ts",
+      "import": "./dist/sandbox/just-bash/index.js"
+    },
     "./sandbox/local": {
       "bun": "./src/sandbox/local/index.ts",
       "types": "./dist/sandbox/local/index.d.ts",
@@ -51,11 +56,20 @@
     "clean": "rm -rf dist .turbo",
     "type-check": "tsc --noEmit"
   },
+  "peerDependencies": {
+    "just-bash": "^3"
+  },
+  "peerDependenciesMeta": {
+    "just-bash": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "@ai-sdk/harness": "^1.0.91"
   },
   "devDependencies": {
     "@ai-sdk/harness-claude-code": "^1.0.94",
+    "just-bash": "^3.4.2",
     "tsup": "^8",
     "typescript": "^6"
   }
