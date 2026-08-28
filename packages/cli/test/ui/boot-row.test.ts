@@ -54,6 +54,22 @@ describe('startBootRow, without animation', () => {
     expect(output.chunks).toEqual(['pulling...\n'])
   })
 
+  it('prints a phase again when its name is reused after a commit', () => {
+    const output = fakeOutput()
+    const row = startBootRow(options(output, false))
+
+    row.update('installing')
+    row.commit('deps ready')
+    row.update('installing')
+    row.stop()
+
+    expect(output.chunks).toEqual([
+      'installing...\n',
+      'deps ready\n',
+      'installing...\n',
+    ])
+  })
+
   it('still commits a finished phase', () => {
     const output = fakeOutput()
     const row = startBootRow(options(output, false))

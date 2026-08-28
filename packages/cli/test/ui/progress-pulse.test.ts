@@ -31,6 +31,14 @@ describe('assertPulseSequence', () => {
   it('rejects a step that is neither lit nor unlit', () => {
     expect(() => assertPulseSequence('1111000x')).toThrow(InvalidPulseSequenceError)
   })
+
+  it('rejects an all-unlit sequence, which animates but never draws the glyph', () => {
+    expect(() => assertPulseSequence('00000000')).toThrow(InvalidPulseSequenceError)
+  })
+
+  it('accepts an always-lit sequence, which is a static indicator rather than a broken one', () => {
+    expect(() => assertPulseSequence('11111111')).not.toThrow()
+  })
 })
 
 describe('pulseStepDurationMs', () => {

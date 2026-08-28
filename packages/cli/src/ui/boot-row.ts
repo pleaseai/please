@@ -177,6 +177,10 @@ export function startBootRow(options: BootRowOptions = {}): BootRow {
         return
       }
       const committed = toRowText(line)
+      // The committed phase is over, so the next `update` starts a new one even when it
+      // reuses the message. Without this, a repeated name reads as a detail-only change
+      // and the non-animating path prints nothing at all.
+      loggedMessage = undefined
       if (live === undefined || current === undefined) {
         output.write(`${committed}\n`)
         return

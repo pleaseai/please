@@ -32,6 +32,23 @@ describe('sanitizeForTerminal', () => {
     expect(sanitizeForTerminal(`${ESC}(Bplain`)).toBe('plain')
   })
 
+  it('consumes an intermediate-plus-final sequence that is not a charset designation', () => {
+    // `ESC # 8` is the screen-alignment test. Matching only the charset introducers left
+    // its final byte behind as text.
+    expect(sanitizeForTerminal(`${ESC}#8plain`)).toBe('plain')
+  })
+
+  it('stops at a byte that cannot continue the sequence, instead of eating the text after it', () => {
+    // Generalising the charset case to the ECMA-48 rule regressed this: the scan ran past a
+    // non-intermediate byte looking for a final one and consumed the `v` of `visible`.
+    expect(sanitizeForTerminal(`${ESC}(\u{1F642}visible`)).toBe('\u{1F642}visible')
+  })
+
+  it('consumes a sequence whose final byte follows ESC directly', () => {
+    expect(sanitizeForTerminal(`${ESC}7saved`)).toBe('saved')
+    expect(sanitizeForTerminal(`${ESC}creset`)).toBe('reset')
+  })
+
   it('removes a single-byte C1 CSI introducer and its sequence', () => {
     expect(sanitizeForTerminal(`${C1_CSI}31mred`)).toBe('red')
   })

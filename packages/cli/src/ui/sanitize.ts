@@ -10,7 +10,13 @@
  * Stripping the escape *character* alone is not enough, because the rest of the sequence
  * (`[31m`) is ordinary text and would stay visible. So sequences are skipped as units:
  * CSI runs to its final byte, string controls (OSC, DCS, …) run to their terminator, and
- * charset designations consume their argument.
+ * everything else follows the general ECMA-48 shape — zero or more intermediate bytes,
+ * then one final byte — which covers a charset designation (`ESC ( B`), the screen
+ * alignment test (`ESC # 8`) and the single-byte forms (`ESC 7`, `ESC c`) alike.
+ *
+ * Malformed input stops the scan rather than extending it: a byte that cannot legally
+ * continue a sequence is treated as text, because reading on for a terminator that is not
+ * coming would delete real output on the way to it.
  *
  * Derived from vercel/eve `packages/eve/src/cli/ui/output.ts` (Apache-2.0) — see NOTICE.
  */
@@ -40,10 +46,20 @@ function isC1StringControl(codePoint: number): boolean {
     || codePoint === 0x9E || codePoint === 0x9F
 }
 
-/** `ESC ( B` and friends: the next code point is the sequence's argument, not text. */
-function isCharsetDesignation(codePoint: number): boolean {
-  return (codePoint >= 0x28 && codePoint <= 0x2B)
-    || (codePoint >= 0x2D && codePoint <= 0x2F)
+/**
+ * ECMA-48 escape-sequence bytes: `ESC`, zero or more intermediates, then one final byte.
+ *
+ * A charset designation (`ESC ( B`) is just one instance of that shape, and so is the
+ * screen-alignment test (`ESC # 8`) — which is why the general rule replaces the special
+ * case for the former. Matching only the charset introducers left the `8` of `ESC # 8`
+ * behind as ordinary text.
+ */
+function isIntermediateByte(codePoint: number): boolean {
+  return codePoint >= 0x20 && codePoint <= 0x2F
+}
+
+function isFinalByte(codePoint: number): boolean {
+  return codePoint >= 0x30 && codePoint <= 0x7E
 }
 
 /** C0 and C1 controls, minus the newline and carriage return a caller may legitimately want. */
@@ -104,16 +120,31 @@ function skipEscape(scan: Scan): number {
   }
 
   const width = String.fromCodePoint(codePoint).length
-  if (!isCharsetDesignation(codePoint)) {
+  if (!isIntermediateByte(codePoint)) {
+    // A final byte straight after ESC ends the sequence there: `ESC 7`, `ESC c`.
     return next + width
   }
 
-  // The designation's argument is one more code point, and it is not text either.
-  const argument = next + width
-  const argumentCodePoint = scan.value.codePointAt(argument)
-  return argumentCodePoint === undefined
-    ? argument
-    : argument + String.fromCodePoint(argumentCodePoint).length
+  // Intermediates run until the final byte that terminates the sequence. None of it is text.
+  let index = next + width
+  while (index < scan.value.length) {
+    const following = scan.value.codePointAt(index)
+    if (following === undefined) {
+      break
+    }
+    if (isFinalByte(following)) {
+      return index + String.fromCodePoint(following).length
+    }
+    // Only an intermediate or a final byte can legally continue the sequence. Anything else
+    // means the input is malformed — stop here and let it be text. Scanning on for a final
+    // byte would swallow every character up to the next ASCII letter, which on untrusted
+    // output is real text disappearing rather than an escape being removed.
+    if (!isIntermediateByte(following)) {
+      return index
+    }
+    index += String.fromCodePoint(following).length
+  }
+  return index
 }
 
 /**

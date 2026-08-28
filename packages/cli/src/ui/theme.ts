@@ -7,7 +7,6 @@
  * Derived from vercel/eve `packages/eve/src/cli/ui/output.ts` (Apache-2.0) — see NOTICE.
  */
 
-import process from 'node:process'
 import picocolors from 'picocolors'
 import { sanitizeForTerminal } from './sanitize'
 import { visibleLength } from './text'
@@ -43,7 +42,13 @@ export interface CliRow {
 }
 
 export function createCliTheme(options: { color?: boolean } = {}): CliTheme {
-  const colors = picocolors.createColors(options.color ?? Boolean(process.stdout.isTTY))
+  // Delegated to picocolors outright rather than gated on `process.stdout.isTTY`. Its
+  // detection already includes the TTY branch, and it is what honours `NO_COLOR`,
+  // `--no-color` and `TERM=dumb` — a bare `isTTY` overrode all three and emitted escapes
+  // into a terminal that asked for none. ANDing the two is no better: it re-breaks the
+  // branches that deliberately enable colour *without* a TTY (`FORCE_COLOR`, `CI`), which
+  // is how a piped or CI-run build keeps its colour. An explicit `color` still wins.
+  const colors = picocolors.createColors(options.color ?? picocolors.isColorSupported)
 
   return {
     color: colors.isColorSupported,

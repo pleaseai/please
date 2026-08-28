@@ -35,6 +35,11 @@ export function assertPulseSequence(sequence: string): void {
   if (/[^01]/.test(sequence)) {
     throw new InvalidPulseSequenceError('A pulse sequence step must be "0" or "1".')
   }
+  // An all-unlit sequence type-checks and animates, but never draws the glyph — which is
+  // the one thing the row exists to show. Silence there reads as a hang.
+  if (!sequence.includes('1')) {
+    throw new InvalidPulseSequenceError('A pulse sequence must have at least one lit step.')
+  }
 }
 
 /**
