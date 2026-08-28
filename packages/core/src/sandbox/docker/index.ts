@@ -17,7 +17,7 @@ export { SandboxFileNotFoundError } from './files'
 export { JOURNAL_ROOT, journalPaths } from './journal'
 export type { JournalMeta, JournalPaths } from './journal'
 
-export { createDockerSandbox, DEFAULT_IMAGE } from './provider'
+export { containerEnv, createDockerSandbox, DEFAULT_IMAGE } from './provider'
 export type { DockerSandboxOptions } from './provider'
 
 export { createDockerSession } from './session'
