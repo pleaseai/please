@@ -1,5 +1,5 @@
 /**
- * `@pleaseai/core/sandbox` — the backend contract, and the way to declare one.
+ * `@pleasedev/core/sandbox` — the backend contract, and the way to declare one.
  *
  * Runtime-neutral on purpose. A backend that spawns host processes (see `./docker`) lives
  * behind its own subpath so that importing this one from a Worker bundle pulls none of it in.

@@ -1,7 +1,7 @@
 # Project layout
 
 > **Status: partly decided, 2026-08-28.** The syntax question is settled and implemented —
-> `defineAgent` and `defineSandbox` exist, `@pleaseai/core`'s root export is no longer empty, and
+> `defineAgent` and `defineSandbox` exist, `@pleasedev/core`'s root export is no longer empty, and
 > `examples/claude-code-docker` runs on them. See [The syntax question](#the-syntax-question-and-why-it-is-defineagent).
 >
 > Open questions 1 and 2 are **answered by measurement**; what they turned on is now also
@@ -134,7 +134,7 @@ exists to avoid.
 a folder whose membership is permanently one is a folder that mislabels itself. The rule scales the
 obvious way — `agents/` and `sandboxes/` when a project genuinely has several, and then both go
 plural together rather than one of them drifting. flue's `sandboxes/daytona.ts` is not a
-counterexample: it holds a *backend adapter*, the slot `@pleaseai/core/sandbox/docker` already
+counterexample: it holds a *backend adapter*, the slot `@pleasedev/core/sandbox/docker` already
 fills, not the configuration of one deployment.
 
 **A second backend belongs to the entrypoint.** Local development runs Docker and production will
@@ -190,7 +190,7 @@ can re-enter.
 
 What the decision explicitly does **not** include: wrapping the harness adapter.
 `harness: createClaudeCode(…)` is imported from `@ai-sdk/harness-claude-code` and passed through.
-A `@pleaseai/core/harness/claude-code` was drafted and withdrawn — it would buy nothing, and it
+A `@pleasedev/core/harness/claude-code` was drafted and withdrawn — it would buy nothing, and it
 would turn "does Codex work" into a question about this package rather than about the AI SDK's
 adapter contract.
 
@@ -271,7 +271,7 @@ A constraint fell out of the same run, and it is a sandbox obligation rather tha
 bypass route **cannot start as root**. The CLI's gate is
 `getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and the first run died on it
 because `node:22-bookworm` runs as root. A container backend therefore either runs the harness as a
-non-root user or declares `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` now declares it for
+non-root user or declares `IS_SANDBOX=1`, and `@pleasedev/core/sandbox/docker` now declares it for
 every container it creates — `containerEnv`, which the caller's own `env` can override. A container
 *is* a deliberate sandbox, so the claim is true rather than a way around the check, and the probe
 no longer sets it: the run is now also the check that the backend does.

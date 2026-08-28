@@ -8,12 +8,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 rest of the public API, the feature set, and the architecture are not.** `defineAgent` and
 `defineSandbox` exist, and the reasoning behind them is in `docs/project-layout.md`. Everything
 past them — channels, workflows, deploy targets, evals — is still open, so do not invent it: do
-not add exported types, classes, or functions to `@pleaseai/core` on the assumption that some
+not add exported types, classes, or functions to `@pleasedev/core` on the assumption that some
 shape was agreed. If a task seems to require an API decision, surface the options and ask.
 
 Workspaces:
 
-- `packages/core` (`@pleaseai/core`) — the one published package. The root export carries
+- `packages/core` (`@pleasedev/core`) — the one published package. The root export carries
   `defineAgent` and the workspace helpers; the sandbox layer lives behind `./sandbox/*` subpaths.
 - `examples/*` — one private package per example, never published. They are type-checked with
   everything else, so an example that stops compiling against the core API fails CI.

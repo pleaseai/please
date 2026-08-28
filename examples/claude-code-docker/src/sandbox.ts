@@ -6,8 +6,8 @@
  * file would build the same definition over a different backend — not a folder of alternatives.
  */
 import process from 'node:process'
-import { defineSandbox } from '@pleaseai/core/sandbox'
-import { DEFAULT_IMAGE, docker } from '@pleaseai/core/sandbox/docker'
+import { defineSandbox } from '@pleasedev/core/sandbox'
+import { DEFAULT_IMAGE, docker } from '@pleasedev/core/sandbox/docker'
 
 export default defineSandbox({
   backend: docker({ image: process.env.EXAMPLE_IMAGE ?? DEFAULT_IMAGE }),

@@ -10,7 +10,7 @@
  * Run:  bun run examples/claude-code-docker/index.ts
  */
 import process from 'node:process'
-import { isDockerAvailable } from '@pleaseai/core/sandbox/docker'
+import { isDockerAvailable } from '@pleasedev/core/sandbox/docker'
 import agent from './src/agent'
 
 function log(step: string, detail = ''): void {

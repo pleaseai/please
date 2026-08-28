@@ -85,10 +85,10 @@ and it runs — [`examples/claude-code-docker`](examples/claude-code-docker) dri
 
 | Subpath | What it is |
 | --- | --- |
-| `@pleaseai/core` | `defineAgent` — a harness adapter, a sandbox, and the workspace directory carried into it |
-| `@pleaseai/core/sandbox` | `defineSandbox`, plus the backend contract — vendor-neutral types |
-| `@pleaseai/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
-| `@pleaseai/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
+| `@pleasedev/core` | `defineAgent` — a harness adapter, a sandbox, and the workspace directory carried into it |
+| `@pleasedev/core/sandbox` | `defineSandbox`, plus the backend contract — vendor-neutral types |
+| `@pleasedev/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
+| `@pleasedev/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
 
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
@@ -139,7 +139,7 @@ mise run ci         # lint + type-check + test + build
 
 ```text
 packages/
-  core/                      # @pleaseai/core
+  core/                      # @pleasedev/core
     src/
       agent/                 # defineAgent, and the workspace route into a session
       sandbox/

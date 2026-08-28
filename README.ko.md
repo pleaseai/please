@@ -77,10 +77,10 @@
 
 | 서브패스 | 무엇인가 |
 | --- | --- |
-| `@pleaseai/core` | `defineAgent` — 하네스 어댑터, 샌드박스, 그리고 그 안으로 실어 나르는 워크스페이스 디렉터리 |
-| `@pleaseai/core/sandbox` | `defineSandbox`와 백엔드 계약 — 벤더 중립 타입 |
-| `@pleaseai/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
-| `@pleaseai/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
+| `@pleasedev/core` | `defineAgent` — 하네스 어댑터, 샌드박스, 그리고 그 안으로 실어 나르는 워크스페이스 디렉터리 |
+| `@pleasedev/core/sandbox` | `defineSandbox`와 백엔드 계약 — 벤더 중립 타입 |
+| `@pleasedev/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
+| `@pleasedev/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
 
 하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
 호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
@@ -129,7 +129,7 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/                      # @pleaseai/core
+  core/                      # @pleasedev/core
     src/
       agent/                 # defineAgent, 그리고 세션으로 들어가는 워크스페이스 경로
       sandbox/

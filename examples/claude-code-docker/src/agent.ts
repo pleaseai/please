@@ -8,7 +8,7 @@
  */
 import process from 'node:process'
 import { createClaudeCode } from '@ai-sdk/harness-claude-code'
-import { defineAgent } from '@pleaseai/core'
+import { defineAgent } from '@pleasedev/core'
 import sandbox from './sandbox'
 
 export default defineAgent({

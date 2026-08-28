@@ -1,5 +1,5 @@
 /**
- * `@pleaseai/core` — the core package of the `please` agent framework.
+ * `@pleasedev/core` — the core package of the `please` agent framework.
  *
  * The framework runs an existing coding-agent harness rather than writing an agent loop, so
  * what is exported here is deliberately narrow: a way to declare an agent, and the workspace

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test'
 
-describe('@pleaseai/core', () => {
+describe('@pleasedev/core', () => {
   it('imports without throwing', async () => {
     const mod = await import('../src/index')
 
