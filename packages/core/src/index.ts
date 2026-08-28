@@ -19,4 +19,10 @@ export type {
 } from './agent/define'
 
 export { readWorkspace, seedWorkspace } from './agent/workspace'
-export type { WorkspaceFiles, WorkspaceSource, WorkspaceWriter } from './agent/workspace'
+export type {
+  SkippedWorkspaceFile,
+  Workspace,
+  WorkspaceFiles,
+  WorkspaceSource,
+  WorkspaceWriter,
+} from './agent/workspace'

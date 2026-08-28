@@ -16,7 +16,7 @@ import type {
   HarnessAgentPermissionMode,
 } from '@ai-sdk/harness/agent'
 import type { SandboxDefinition } from '../sandbox/define'
-import type { WorkspaceFiles, WorkspaceSource } from './workspace'
+import type { Workspace, WorkspaceSource } from './workspace'
 import { HarnessAgent } from '@ai-sdk/harness/agent'
 import { resolveSandbox } from '../sandbox/define'
 import { createHarnessSandboxProvider } from '../sandbox/harness'
@@ -93,7 +93,7 @@ export function defineAgent(definition: AgentDefinition): Agent {
 
   // Read once, not per session: the directory is the same for every session, and a local run
   // that creates several would otherwise walk the host filesystem again for each.
-  let workspace: Promise<WorkspaceFiles> | undefined
+  let workspace: Promise<Workspace> | undefined
 
   /**
    * A `HarnessAgent` per session, deliberately.
@@ -121,7 +121,7 @@ export function defineAgent(definition: AgentDefinition): Agent {
             workspace = undefined
             throw cause
           })
-          await seedWorkspace(context.session, context.sessionWorkDir, await workspace)
+          await seedWorkspace(context.session, context.sessionWorkDir, (await workspace).files)
         }
         // The definition's own hook runs last, so it can overwrite anything the workspace
         // seeded rather than being overwritten by it.
