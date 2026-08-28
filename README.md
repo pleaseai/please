@@ -78,7 +78,7 @@ stream, a socket) that pretending they are one thing is how the abstraction goes
 
 ## Status
 
-**The framework API is still undesigned.** `@pleaseai/core`'s root export is deliberately empty,
+**The framework API is still undesigned.** `@pleasedev/core`'s root export is deliberately empty,
 so no accidental surface can be quoted back as if it were settled.
 
 One layer does exist, because it was the layer the open questions could not be answered without: the
@@ -86,9 +86,9 @@ One layer does exist, because it was the layer the open questions could not be a
 
 | Subpath | What it is |
 | --- | --- |
-| `@pleaseai/core/sandbox` | the backend contract — vendor-neutral types |
-| `@pleaseai/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
-| `@pleaseai/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
+| `@pleasedev/core/sandbox` | the backend contract — vendor-neutral types |
+| `@pleasedev/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
+| `@pleasedev/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
 
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
@@ -132,7 +132,7 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/                      # @pleaseai/core — root export is deliberately empty
+  core/                      # @pleasedev/core — root export is deliberately empty
     src/sandbox/
       contract/              # the backend contract
       harness/               # HarnessV1SandboxProvider over that contract

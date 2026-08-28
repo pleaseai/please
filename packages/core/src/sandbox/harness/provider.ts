@@ -25,7 +25,7 @@ export interface HarnessSandboxProviderOptions {
   /** Passed to every session — see `HarnessSandboxSessionOptions.defaultWorkingDirectory`. */
   defaultWorkingDirectory: string
   ports: readonly number[]
-  /** Defaults to `pleaseai-<backend>`, so a diagnostic names the backend that produced it. */
+  /** Defaults to `pleasedev-<backend>`, so a diagnostic names the backend that produced it. */
   providerId?: string
   /** Defaults to `crypto.randomUUID()`. Injected only so tests can pin the minted id. */
   newSessionId?: () => string
@@ -42,7 +42,7 @@ export function createHarnessSandboxProvider(
 
   return {
     specificationVersion: 'harness-sandbox-v1',
-    providerId: options.providerId ?? `pleaseai-${sandboxes.backend}`,
+    providerId: options.providerId ?? `pleasedev-${sandboxes.backend}`,
     // `identity` — the framework's key for snapshot-based reuse — is ignored, because the
     // contract has no snapshot primitive to key anything on. A backend that grows one answers
     // it there, through the sandbox id it is already addressed by.
