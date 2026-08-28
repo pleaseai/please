@@ -1,0 +1,15 @@
+{
+  "name": "@pleaseai/example-claude-code-docker",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "bun run index.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/harness": "^1.0.91",
+    "@ai-sdk/harness-claude-code": "^1.0.94",
+    "@pleaseai/core": "workspace:*"
+  }
+}
