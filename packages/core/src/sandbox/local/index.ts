@@ -8,10 +8,13 @@
  * it in. The second is a decision for whoever wires it; see `./provider.ts`.
  */
 
+// Re-exported so a caller holding this subpath need not also import the contract to catch it.
+// The class itself lives on the contract, because its whole purpose is one identity across
+// backends — see `../contract/types.ts`.
+export { SandboxFileNotFoundError } from '../contract'
+
 export { DEFAULT_ENV_ALLOWLIST, resolveBaseEnv } from './env'
 export type { LocalEnvOptions } from './env'
-
-export { SandboxFileNotFoundError } from './files'
 
 export { journalPaths, timeoutSeconds, wrapperArgv } from './journal'
 export type { JournalMeta, JournalPaths } from './journal'

@@ -14,19 +14,9 @@ import type {
  * further translation that `../harness/files.ts` already performs for every backend at once.
  */
 import { Buffer } from 'node:buffer'
+import { SandboxFileNotFoundError } from '../contract'
 import { execInContainer, execInContainerBytes, spawnInContainer } from './exec'
 import { quoteArg } from './shell-quote'
-
-/** Raised when a read names a path the container does not have. */
-export class SandboxFileNotFoundError extends Error {
-  readonly path: string
-
-  constructor(path: string) {
-    super(`file '${path}' does not exist in the sandbox`)
-    this.name = 'SandboxFileNotFoundError'
-    this.path = path
-  }
-}
 
 function parentDirectory(path: string): string {
   const index = path.lastIndexOf('/')

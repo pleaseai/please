@@ -23,26 +23,7 @@ import type {
 import { Buffer } from 'node:buffer'
 import { mkdir, stat } from 'node:fs/promises'
 import { dirname, isAbsolute, resolve } from 'node:path'
-
-/**
- * Raised when a read names a path the sandbox does not have.
- *
- * Deliberately this backend's own identity rather than a shared one. `@pleaseai/core/sandbox`
- * exports the two error classes the contract argues callers must be able to match across
- * backends — an expired wait and a missing exit record — and a missing file is not yet among
- * them. Promoting it is a contract change, and this backend is not the place to make one
- * unilaterally; a caller that needs to match across `docker` and `local` today matches on the
- * `name`, which is the same string in both.
- */
-export class SandboxFileNotFoundError extends Error {
-  readonly path: string
-
-  constructor(path: string) {
-    super(`file '${path}' does not exist in the sandbox`)
-    this.name = 'SandboxFileNotFoundError'
-    this.path = path
-  }
-}
+import { SandboxFileNotFoundError } from '../contract'
 
 function toBytes(content: string, encoding: SandboxFileEncoding | undefined): Uint8Array {
   return encoding === 'base64'

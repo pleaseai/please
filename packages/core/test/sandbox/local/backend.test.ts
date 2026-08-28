@@ -19,7 +19,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
 import { afterAll, beforeAll, describe, expect, it } from 'bun:test'
-import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../../../src/sandbox/contract'
+import {
+  SandboxFileNotFoundError,
+  SandboxNoExitRecordError,
+  SandboxWaitTimeoutError,
+} from '../../../src/sandbox/contract'
 import { createLocalSandbox, sandboxDirName } from '../../../src/sandbox/local'
 
 const suite = process.platform === 'win32' ? describe.skip : describe
@@ -153,7 +157,9 @@ suite('local sandbox backend', () => {
   it('rejects a read of a path that does not exist', async () => {
     const session = sandboxes.session(sandboxId)
 
-    await expect(session.readFile('absent')).rejects.toThrow()
+    await expect(session.readFile('absent'))
+      .rejects
+      .toBeInstanceOf(SandboxFileNotFoundError)
   })
 
   it('reports a missing path as absent rather than throwing', async () => {

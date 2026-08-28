@@ -6,13 +6,16 @@
  * reason: importing `@pleaseai/core` or `@pleaseai/core/sandbox` pulls none of it in.
  */
 
+// Re-exported so a caller holding this subpath need not also import the contract to catch it.
+// The class itself lives on the contract, because its whole purpose is one identity across
+// backends — see `../contract/types.ts`.
+export { SandboxFileNotFoundError } from '../contract'
+
 export { DOCKER_BIN, DockerCommandError, isDockerAvailable } from './cli'
 export type { DockerCallOptions, DockerResult } from './cli'
 
 export { containerName, createContainerHandle } from './container'
 export type { ContainerHandle, ContainerOptions } from './container'
-
-export { SandboxFileNotFoundError } from './files'
 
 export { JOURNAL_ROOT, journalPaths } from './journal'
 export type { JournalMeta, JournalPaths } from './journal'
