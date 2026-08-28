@@ -17,7 +17,7 @@ import type { SandboxRoot } from './root'
 import { mkdir, readdir, stat } from 'node:fs/promises'
 import { isAbsolute, resolve } from 'node:path'
 import { createLocalFiles } from './files'
-import { journalPaths, wrapperArgv } from './journal'
+import { isJournalId, journalPaths, wrapperArgv } from './journal'
 import { createProcessHandle } from './process'
 import { readJournalState, toProcessStatus } from './process-state'
 
@@ -190,6 +190,12 @@ async function getProcess(
   options: LocalSessionOptions,
   processId: string,
 ): Promise<SandboxProcessHandle | null> {
+  // An id that cannot name a journal names no process. Rejected before it is joined onto
+  // `journalRoot`, so a path-shaped id reads nothing rather than reading outside the tree —
+  // see `isJournalId` in `./journal.ts`.
+  if (!isJournalId(processId)) {
+    return null
+  }
   // Discovery must not create: asking whether a sandbox ever ran a process is a question, and
   // a question that stands one up has changed the thing it was asking about.
   if (await options.root.peek() === undefined) {

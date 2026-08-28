@@ -102,6 +102,27 @@ export function defenseInDepthSupported(): boolean {
 }
 
 /**
+ * Whether a failed `import()` means the package is absent, rather than broken.
+ *
+ * Only a resolution failure naming this specifier counts. Two other things reach the same
+ * `catch` and are not the same fact: a module-evaluation error, which means `just-bash` is
+ * installed and threw while loading, and a resolution failure naming one of *its* dependencies,
+ * which means the install is incomplete. Reporting either as "not installed" tells a caller to
+ * run an install it has already run, and buries the real error inside a `cause` nothing reads.
+ *
+ * Measured on Bun 1.3.14: a missing package throws `ResolveMessage` with
+ * `code: 'ERR_MODULE_NOT_FOUND'` and a message naming the specifier. `MODULE_NOT_FOUND` is
+ * Node's CommonJS spelling of the same condition.
+ */
+function isMissingPackage(cause: unknown, specifier: string): boolean {
+  const code = (cause as NodeJS.ErrnoException | undefined)?.code
+  if (code !== 'ERR_MODULE_NOT_FOUND' && code !== 'MODULE_NOT_FOUND') {
+    return false
+  }
+  return String((cause as Error | undefined)?.message ?? '').includes(specifier)
+}
+
+/**
  * Import `just-bash`, or explain that it is missing.
  *
  * The specifier is built at runtime so a bundler cannot decide to resolve the optional peer at
@@ -113,6 +134,9 @@ export async function loadJustBash(): Promise<JustBashModule> {
     return (await import(/* @vite-ignore */ specifier)) as unknown as JustBashModule
   }
   catch (cause) {
-    throw new JustBashUnavailableError(cause)
+    if (isMissingPackage(cause, specifier)) {
+      throw new JustBashUnavailableError(cause)
+    }
+    throw cause
   }
 }

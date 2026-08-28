@@ -133,15 +133,17 @@ export function createJustBashSandbox(options: JustBashSandboxOptions = {}): San
     return {
       ...created,
       destroy: async () => {
-        try {
-          await created.destroy()
+        // Evicted before the teardown is awaited, not in a `finally` after it. Awaiting first
+        // leaves a window in which a new `session(id)` finds this handle still registered,
+        // adopts it, and reacquires — and the identity check would then still pass, so this
+        // call would delete the *new* session's handle and its process registry on the way
+        // out. Removing the entry up front makes the next `session(id)` build a fresh handle
+        // instead of one that is being torn down.
+        if (handles.get(sandboxId) === handle) {
+          handles.delete(sandboxId)
+          registries.delete(sandboxId)
         }
-        finally {
-          if (handles.get(sandboxId) === handle) {
-            handles.delete(sandboxId)
-            registries.delete(sandboxId)
-          }
-        }
+        await created.destroy()
       },
     }
   }

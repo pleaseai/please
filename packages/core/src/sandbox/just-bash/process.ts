@@ -70,6 +70,32 @@ async function collect(record: ProcessRecord): Promise<ProcessLogEvent[]> {
   return events
 }
 
+/**
+ * The work, or `undefined` when the signal fires first.
+ *
+ * The work is not cancelled — the vendor's `logs()` is an async iterator with nothing to
+ * abort — so it runs to completion in the background and its result is dropped. That is the
+ * whole point: the caller gets its answer at abort time instead of at command-exit time.
+ */
+function raceAbort<T>(work: Promise<T>, signal: AbortSignal): Promise<T | undefined> {
+  // The listener is removed through its own signal rather than by hand, so a read that
+  // finishes first leaves nothing attached to the caller's — which may outlive this call and
+  // be reused for other work.
+  const listener = new AbortController()
+  const aborted = new Promise<undefined>((resolve) => {
+    signal.addEventListener('abort', () => resolve(undefined), {
+      once: true,
+      signal: listener.signal,
+    })
+  })
+  return Promise.race([work, aborted]).finally(() => listener.abort())
+}
+
+/** A stream that is already over, for a read that was abandoned before it could produce one. */
+function closedStream(): ReadableStream<ProcessLogEvent> {
+  return new ReadableStream<ProcessLogEvent>({ start: controller => controller.close() })
+}
+
 function parseCursor(cursor: string | undefined): number {
   const value = Number.parseInt(cursor ?? '', 10)
   return Number.isInteger(value) && value > 0 ? value : 0
@@ -91,17 +117,26 @@ async function logs(
   record: ProcessRecord,
   options: ProcessLogsOptions = {},
 ): Promise<ReadableStream<ProcessLogEvent>> {
-  const events = await collect(record)
+  // The abort is honoured around the collect, not after it. `collect` drains the vendor's
+  // `logs()`, which does not yield until the command ends — so checking the signal only once
+  // the events are in hand would make an aborted read return when the command it gave up on
+  // finished, which for a long turn is exactly the wait the caller aborted to avoid.
+  if (options.signal?.aborted === true) {
+    return closedStream()
+  }
+  const events = options.signal === undefined
+    ? await collect(record)
+    : await raceAbort(collect(record), options.signal)
+  if (events === undefined) {
+    return closedStream()
+  }
+
   const from = parseCursor(options.since)
   const pending = events.slice(from)
   const code = record.command.exitCode
 
   return new ReadableStream<ProcessLogEvent>({
     start: (controller) => {
-      if (options.signal?.aborted === true) {
-        controller.close()
-        return
-      }
       for (const event of pending) {
         controller.enqueue(event)
       }

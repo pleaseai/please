@@ -10,6 +10,14 @@ import type { JournalMeta, JournalPaths } from './journal'
 import process from 'node:process'
 import { parseExitLine, reconcileSignal } from './journal'
 
+/** How long one identity verdict is reused. Bounds `ps` to ~one spawn per second per process. */
+const IDENTITY_TTL_MS = 1_000
+
+/** Entries kept before expired ones are swept. Only reached by a host tracking many processes. */
+const IDENTITY_CACHE_LIMIT = 256
+
+const identityCache = new Map<string, { verdict: boolean, checkedAt: number }>()
+
 export interface JournalState {
   meta?: JournalMeta
   exit?: { code: number, signal?: number }
@@ -51,29 +59,93 @@ function parseMeta(raw: string): JournalMeta | undefined {
 }
 
 /**
+ * The argv of a running process, or `undefined` when `ps` itself could not be run.
+ *
+ * `''` is a real answer and a different one: `ps` ran and listed nothing, so the pid is gone.
+ */
+async function argvOf(pid: number): Promise<string | undefined> {
+  try {
+    const child = Bun.spawn(['ps', '-ww', '-p', String(pid), '-o', 'args='], {
+      stdout: 'pipe',
+      stderr: 'ignore',
+    })
+    const [text] = await Promise.all([new Response(child.stdout).text(), child.exited])
+    return text
+  }
+  catch {
+    return undefined
+  }
+}
+
+/**
+ * Whether the pid still belongs to *this* journal's wrapper.
+ *
+ * `wrapperArgv` puts the journal directory in the wrapper's own argv, which is what makes this
+ * answerable at all: the directory is unique per process id, so an argv carrying it identifies
+ * the wrapper and nothing else on the host.
+ *
+ * When `ps` cannot be run the answer is `true` — signal 0 already said something is there, and
+ * reporting a live process dead because the tool that identifies it is missing is the worse of
+ * the two errors: a caller acts on `error`/`no_exit_record` by giving up on a process that is
+ * still writing.
+ *
+ * The verdict is cached for {@link IDENTITY_TTL_MS} because the poll loops in `./process.ts`
+ * read state every 120ms and a `ps` per tick would be a subprocess spawn per tick.
+ */
+async function identityHolds(pid: number, journalDir: string): Promise<boolean> {
+  const key = `${pid}\u0000${journalDir}`
+  const now = Date.now()
+  const cached = identityCache.get(key)
+  if (cached !== undefined && now - cached.checkedAt < IDENTITY_TTL_MS) {
+    return cached.verdict
+  }
+
+  const argv = await argvOf(pid)
+  const verdict = argv === undefined ? true : argv.includes(journalDir)
+
+  if (identityCache.size >= IDENTITY_CACHE_LIMIT) {
+    for (const [staleKey, entry] of identityCache) {
+      if (now - entry.checkedAt >= IDENTITY_TTL_MS) {
+        identityCache.delete(staleKey)
+      }
+    }
+  }
+  identityCache.set(key, { verdict, checkedAt: now })
+  return verdict
+}
+
+/**
  * Whether the wrapper is still running.
  *
  * Signal 0 performs the permission and existence checks without delivering anything. `EPERM`
  * means the process is there and owned by someone else, which is still "alive" — only `ESRCH`
  * is an answer of no.
  *
- * **This is a pid check, and a pid can be reused.** The window is the one between the wrapper
- * dying and its exit line landing, because writing that line is the wrapper's last act — and
- * every caller here consults `exit` first, so a reused pid can at worst delay a verdict by one
- * poll rather than fabricate one. Running inside a container narrows the same window for the
- * Docker backend; on a host it is narrow rather than closed.
+ * **Signal 0 alone is not enough, because a pid is reused.** It is tempting to argue that
+ * every caller consults `exit` first, so a reused pid could only delay a verdict — but the one
+ * case that matters is exactly the case with no exit record. A wrapper `SIGKILL`ed from
+ * outside never writes one, and once the host hands its pid to an unrelated process, `alive`
+ * is the *only* signal left: `status()` would report `running` forever instead of `error`,
+ * `waitForExit` would never reach `SandboxNoExitRecordError`, and `kill()` would send a
+ * group signal to a tree that has nothing to do with this sandbox. So a positive answer is
+ * confirmed against the wrapper's argv before it is believed.
+ *
+ * The Docker backend is genuinely narrower here — its pid space is the container's — which is
+ * why this check lives in the local backend and not in `../docker/process-state.ts`.
  */
-function isAlive(pid: number | undefined): boolean {
+async function isAlive(pid: number | undefined, journalDir: string): Promise<boolean> {
   if (pid === undefined) {
     return false
   }
   try {
     process.kill(pid, 0)
-    return true
   }
   catch (cause) {
-    return (cause as NodeJS.ErrnoException).code === 'EPERM'
+    if ((cause as NodeJS.ErrnoException).code !== 'EPERM') {
+      return false
+    }
   }
+  return identityHolds(pid, journalDir)
 }
 
 /** Attach the journalled signal to an exit line, when the two agree it was signalled. */
@@ -102,7 +174,7 @@ export async function readJournalState(paths: JournalPaths): Promise<JournalStat
     meta: parseMeta(meta),
     ...(parsedExit === undefined ? {} : { exit: withSignal(parsedExit, parseNumber(signal)) }),
     ...(parsedPid === undefined ? {} : { pid: parsedPid }),
-    alive: isAlive(parsedPid),
+    alive: await isAlive(parsedPid, paths.dir),
     timedOut,
   }
 }

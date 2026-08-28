@@ -244,9 +244,16 @@ suite('local sandbox backend', () => {
     const session = sandboxes.session(sandboxId)
 
     const proc = await session.exec(['sh', '-c', 'echo one ; sleep 0.6 ; echo two'])
-    // Read the first line only, while the process is still between its two writes.
-    await Bun.sleep(200)
-    const first = await drain(await proc.logs({ replay: true }))
+    // Read the first line only, while the process is still between its two writes. Polled
+    // rather than slept: a fixed nap has to be long enough for the wrapper to spawn and the
+    // first line to land, and short enough to stay inside a 0.6s gap, and on a loaded machine
+    // no single number is both. Polling takes the first read that has `one` in it, which is
+    // the state the assertions below describe.
+    let first = await drain(await proc.logs({ replay: true }))
+    while (!first.stdout.includes('one')) {
+      await Bun.sleep(20)
+      first = await drain(await proc.logs({ replay: true }))
+    }
     await proc.waitForExit()
     const rest = await drain(await proc.logs({ since: first.cursor! }))
 
@@ -573,6 +580,41 @@ suite('local sandbox backend', () => {
     expect(await session.getProcess(orphanId)).toBeNull()
     expect((await session.listProcesses()).map(entry => entry.id)).not.toContain(orphanId)
   })
+
+  it('resolves no process for an id that is not one this backend could have minted', async () => {
+    const session = sandboxes.session(sandboxId)
+    // The id becomes a path segment under `journal/`, so a path-shaped one would otherwise read
+    // a journal outside the tree this backend owns. Rejected before the join, it names nothing.
+    for (const escape of ['../../..', '..', 'a/b', '/etc', '.']) {
+      expect(await session.getProcess(escape)).toBeNull()
+    }
+  })
+
+  it('stops the processes it journalled before deleting the tree they write into', async () => {
+    const session = sandboxes.session(`reap-${crypto.randomUUID().slice(0, 8)}`)
+    const proc = await session.exec(['sleep', '30'])
+    const { pid } = await proc.status()
+    expect(pid).toBeGreaterThan(0)
+
+    await session.destroy()
+
+    // Unlinking a directory does not stop a process writing into it — the open descriptors
+    // survive — so without the reap the wrapper would still be here, detached, for 30 seconds.
+    const alive = () => {
+      try {
+        process.kill(pid, 0)
+        return true
+      }
+      catch (cause) {
+        return (cause as NodeJS.ErrnoException).code === 'EPERM'
+      }
+    }
+    const deadline = Date.now() + 2_000
+    while (alive() && Date.now() < deadline) {
+      await Bun.sleep(20)
+    }
+    expect(alive()).toBe(false)
+  }, 20_000)
 
   it('destroys idempotently', async () => {
     const session = sandboxes.session(`twice-${crypto.randomUUID().slice(0, 8)}`)

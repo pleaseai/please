@@ -18,6 +18,7 @@ import type {
 } from '../contract'
 import type { JournalPaths } from './journal'
 import type { JournalState } from './process-state'
+import { constants } from 'node:os'
 import process from 'node:process'
 import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../contract'
 import { openLogStream, readLiveOffsets } from './process-logs'
@@ -28,6 +29,8 @@ const POLL_INTERVAL_MS = 50
 
 /** How long `kill` waits for the wrapper to reap the child before it gives up watching. */
 const REAP_TIMEOUT_MS = 5_000
+
+const SIGKILL = constants.signals.SIGKILL
 
 export interface ProcessHandleOptions {
   processId: string
@@ -68,6 +71,41 @@ function terminalEvent(
 }
 
 /**
+ * Hold an exit record back until the group it describes is actually gone.
+ *
+ * The wrapper's escalation writes its exit record *before* `kill -9 -$wrapper`, and has to:
+ * the wrapper dies with the group it is killing, so a record written afterwards would never be
+ * written at all (`./journal.ts` says the same at the line that writes it). The cost is a
+ * window in which the journal reads as finished while the tree is still up — and a caller that
+ * returned there would be free to delete the working directory, or start a retry, over
+ * processes still running in it.
+ *
+ * Only the escalation's own record waits. `signal === SIGKILL` is written by nothing else —
+ * an uncatchable signal leaves no record when it arrives from outside — so an ordinary exit,
+ * which is every exit in the common case, still returns on the first read.
+ */
+async function settle(options: ProcessHandleOptions, exit: ProcessExit): Promise<ProcessExit> {
+  if (exit.signal === SIGKILL) {
+    await awaitGroupExit(options)
+  }
+  return exit
+}
+
+/** Poll until the wrapper's pid is gone, or the budget for watching runs out. */
+async function awaitGroupExit(options: ProcessHandleOptions): Promise<void> {
+  const deadline = Date.now() + REAP_TIMEOUT_MS
+  for (;;) {
+    if (!(await readJournalState(options.paths)).alive) {
+      return
+    }
+    if (Date.now() >= deadline) {
+      return
+    }
+    await Bun.sleep(POLL_INTERVAL_MS)
+  }
+}
+
+/**
  * Wait until the journal records an exit.
  *
  * A wait that ends before the process does **rejects** — with {@link SandboxWaitTimeoutError}
@@ -88,7 +126,7 @@ async function waitForExit(
     const state = await readJournalState(options.paths)
     const exit = toProcessExit(state)
     if (exit !== undefined) {
-      return exit
+      return settle(options, exit)
     }
 
     // Re-read once before believing a disappearance: the wrapper writes its exit line and then
@@ -98,7 +136,7 @@ async function waitForExit(
       const settled = await readJournalState(options.paths)
       const settledExit = toProcessExit(settled)
       if (settledExit !== undefined) {
-        return settledExit
+        return settle(options, settledExit)
       }
       if (!settled.alive) {
         throw new SandboxNoExitRecordError(options.processId)

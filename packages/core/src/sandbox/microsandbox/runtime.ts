@@ -72,11 +72,23 @@ export interface MicroFsReadStream {
 }
 
 /** The guest filesystem, reached over the vendor's own channel rather than through a shell. */
+/**
+ * What a `stat` answers, narrowed to the one field this backend reads.
+ *
+ * The vendor's `FsMetadata` carries kind, mode, timestamps and a readonly flag as well. Copying
+ * only `size` keeps the shape test asserting what is actually depended on: a vendor that adds a
+ * field still matches, and one that drops `size` does not.
+ */
+export interface MicroFsMetadata {
+  readonly size: number
+}
+
 export interface MicroFsOps {
   read: (path: string) => Promise<Uint8Array>
   readStream: (path: string) => Promise<MicroFsReadStream>
   write: (path: string, data: Uint8Array | string) => Promise<void>
   mkdir: (path: string) => Promise<void>
+  stat: (path: string) => Promise<MicroFsMetadata>
   exists: (path: string) => Promise<boolean>
 }
 

@@ -25,7 +25,6 @@ import type { JournalPaths } from '../docker/journal'
 import type { JournalState } from './process-state'
 import type { MicroSandbox } from './runtime'
 import { SandboxNoExitRecordError, SandboxWaitTimeoutError } from '../contract'
-import { quoteArg } from '../docker/shell-quote'
 import { execScript } from './guest'
 import { openLogStream } from './process-logs'
 import { readFullJournalState, readJournalState, toProcessExit, toProcessStatus } from './process-state'
@@ -39,21 +38,36 @@ const REAP_TIMEOUT_MS = 5_000
 /** How long a followed read waits for the wrapper's pid to appear in the journal. */
 const PID_TIMEOUT_MS = 1_000
 
+/**
+ * Byte size of one log file, or zero when the wrapper has not created it yet.
+ *
+ * Read through the vendor's filesystem channel rather than `wc -c`. The shell form had to be
+ * written `wc -c < f 2>/dev/null || echo 0`, and that `|| echo 0` cannot tell a file that does
+ * not exist yet from a `wc` that failed for any other reason — a transport hiccup, a permission
+ * error. Both came back as offset zero, and offset zero is not a harmless default here: it is
+ * the instruction to a `follow` read to treat the entire existing log as newly arrived, so a
+ * caller resuming a long turn replays every line it had already seen.
+ *
+ * `exists` is what separates the two now, and only the absent case yields zero. Anything else
+ * throws, which is the honest answer for an offset nothing could measure.
+ */
+async function sizeOf(sandbox: MicroSandbox, path: string): Promise<number> {
+  if (!await sandbox.fs().exists(path)) {
+    return 0
+  }
+  return Math.max(0, (await sandbox.fs().stat(path)).size)
+}
+
 /** Byte sizes of both log files, for a read that starts at the live tail. */
 async function readLiveOffsets(
   sandbox: MicroSandbox,
   paths: JournalPaths,
 ): Promise<{ stdout: number, stderr: number }> {
-  const script = [
-    `wc -c < ${quoteArg(paths.stdout)} 2>/dev/null || echo 0`,
-    `wc -c < ${quoteArg(paths.stderr)} 2>/dev/null || echo 0`,
-  ].join('\n')
-  const result = await execScript(sandbox, script)
-  const [out = '0', err = '0'] = result.stdout.trim().split('\n')
-  return {
-    stdout: Math.max(0, Number.parseInt(out.trim(), 10) || 0),
-    stderr: Math.max(0, Number.parseInt(err.trim(), 10) || 0),
-  }
+  const [stdout, stderr] = await Promise.all([
+    sizeOf(sandbox, paths.stdout),
+    sizeOf(sandbox, paths.stderr),
+  ])
+  return { stdout, stderr }
 }
 
 /**

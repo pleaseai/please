@@ -24,6 +24,43 @@ function parentDirectory(path: string): string {
 }
 
 /**
+ * What to throw for a read that failed.
+ *
+ * The vendor raises one `SandboxFsOpsError` for every filesystem failure, so the class carries
+ * no answer to *which* one this was — and reporting all of them as {@link
+ * SandboxFileNotFoundError} tells a caller a file is missing when the real fault was a
+ * permission it lacks, a VM that stopped, or a transport that dropped. The contract's error is
+ * a claim about the file; making it unconditionally is making a claim that was never checked.
+ *
+ * So the check is made, on the failure path only, where an extra round trip costs nothing that
+ * a successful read pays. `exists` answering *no* is what promotes the failure to the
+ * contract's error; anything else — including `exists` failing in turn — rethrows the vendor's
+ * own error, which still carries what actually went wrong.
+ *
+ * This is racy by construction: a file deleted between the read and the check reads as absent,
+ * and one created in that window reads as present. Both mislabel an error that already
+ * happened, and neither invents one.
+ *
+ * **Unverified.** `microsandbox` ships no native addon for `darwin-x64`, so this path has been
+ * type-checked and not executed — see `test/sandbox/microsandbox/vendor-shape.test.ts`.
+ */
+async function readFailure(
+  sandbox: MicroSandbox,
+  path: string,
+  cause: unknown,
+): Promise<unknown> {
+  try {
+    if (await sandbox.fs().exists(path)) {
+      return cause
+    }
+  }
+  catch {
+    return cause
+  }
+  return Object.assign(new SandboxFileNotFoundError(path), { cause })
+}
+
+/**
  * A streamed read.
  *
  * The vendor's stream is an async source with a `recv()` that answers `null` at the end, so this
@@ -37,7 +74,7 @@ async function readStream(sandbox: MicroSandbox, path: string): Promise<SandboxF
     source = await sandbox.fs().readStream(path)
   }
   catch (cause) {
-    throw Object.assign(new SandboxFileNotFoundError(path), { cause })
+    throw await readFailure(sandbox, path, cause)
   }
 
   return {
@@ -64,10 +101,7 @@ async function readDecoded(
     bytes = await sandbox.fs().read(path)
   }
   catch (cause) {
-    // The vendor reports a missing path by throwing, and it is the only failure a read of an
-    // existing sandbox has — but it is not the only one it *could* have, so the cause is kept
-    // rather than swallowed.
-    throw Object.assign(new SandboxFileNotFoundError(path), { cause })
+    throw await readFailure(sandbox, path, cause)
   }
 
   if (encoding === 'base64') {

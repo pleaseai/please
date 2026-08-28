@@ -16,6 +16,7 @@
  * to propagate.
  */
 import type { MicroSandbox, MicroSandboxBuilder } from './runtime'
+import { createHash } from 'node:crypto'
 import { loadMicrosandbox } from './runtime'
 
 /** Characters the vendor's sandbox names are restricted to here. */
@@ -26,15 +27,14 @@ function sanitize(value: string): string {
 /**
  * A short, stable digest of a string, as lowercase hex.
  *
- * FNV-1a: the digest only has to separate two ids the sanitizer maps together, so a
- * non-cryptographic hash that needs no async subtle-crypto call is the right size of tool.
+ * SHA-256, truncated to 64 bits — the same choice and the same reasoning as `../local/root.ts`.
+ * A collision here means two sandbox ids naming one microVM, so one id's `destroy()` kills the
+ * other's machine and its journal with it. 32 bits reaches even odds of that at around 77,000
+ * ids; 64 bits puts the same point past five billion. `createHash` is synchronous, so the
+ * argument for a non-cryptographic hash — avoiding an `await` on web crypto — does not apply.
  */
 function shortDigest(value: string): string {
-  let hash = 0x811C9DC5
-  for (let index = 0; index < value.length; index += 1) {
-    hash = Math.imul(hash ^ value.charCodeAt(index), 0x01000193) >>> 0
-  }
-  return hash.toString(16).padStart(8, '0')
+  return createHash('sha256').update(value).digest('hex').slice(0, 16)
 }
 
 /**

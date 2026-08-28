@@ -7,9 +7,10 @@
  * straight to the agent's `bash` tool, and with it every AWS key, `GH_TOKEN` and
  * `SSH_AUTH_SOCK` the developer happens to be carrying.
  *
- * So the default is an allowlist, borrowed from flue's `local()`
- * (`packages/runtime/src/node/local-env.ts`, `DEFAULT_LOCAL_ENV_ALLOWLIST`) for the same
- * reason it exists there. Anything else is opt-in through {@link LocalEnvOptions.env}.
+ * So the default is an allowlist, borrowed from flue's `local()` for the same reason it exists
+ * there — `DEFAULT_LOCAL_ENV_ALLOWLIST` in `withastro/flue`, at
+ * `packages/runtime/src/node/local-env.ts`. That path is flue's, not this repository's; naming
+ * the repository is what makes the provenance checkable rather than a dead reference. Anything else is opt-in through {@link LocalEnvOptions.env}.
  */
 import process from 'node:process'
 

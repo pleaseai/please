@@ -53,6 +53,22 @@ export interface JournalPaths {
   abandon: string
 }
 
+/**
+ * Process ids this backend will resolve to a journal directory.
+ *
+ * `exec()` mints `crypto.randomUUID()`, which fits — but `getProcess(id)` takes whatever a
+ * caller passes, and the id becomes a path segment. Without this, `../../../etc` reads a
+ * journal outside `journalRoot`, and a `remove()`-shaped id reaches outside the tree this
+ * backend owns. `./root.ts` makes the same argument for sandbox ids, where the answer is a
+ * lossy sanitiser plus a digest; here rejection is better than repair, because a process id is
+ * only ever one this backend handed out.
+ */
+const JOURNAL_ID = /^[\w-]{1,128}$/
+
+export function isJournalId(value: string): boolean {
+  return JOURNAL_ID.test(value)
+}
+
 /** The paths one process's journal is made of. */
 export function journalPaths(journalRoot: string, processId: string): JournalPaths {
   const dir = join(journalRoot, processId)
@@ -181,7 +197,13 @@ export const WRAPPER_SCRIPT: string = [
   //   A subshell inherits the wrapper's trap *actions*, so this replaces `on_signal` for the
   //   watchdog: a TERM here is the wrapper saying the deadline is no longer needed, which is a
   //   different thing from the TERM the watchdog itself sends the group.
-  '    trap \'kill -9 "$nap" 2>/dev/null ; exit 0\' TERM',
+  //
+  //   `jobs -p` rather than `$nap`, because the TERM can arrive between starting the sleep and
+  //   assigning its pid — a command fast enough to finish before that assignment would leave
+  //   the nap orphaned, running out the whole budget with nobody left to reap it. Asking the
+  //   shell for its own background jobs has no such window: the job exists from the moment it
+  //   is started, whether or not a variable has caught its pid yet.
+  '    trap \'kill -9 $(jobs -p) 2>/dev/null ; exit 0\' TERM',
   '    sleep "$budget" &',
   '    nap=$!',
   '    wait "$nap"',

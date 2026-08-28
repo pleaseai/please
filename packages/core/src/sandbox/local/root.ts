@@ -27,8 +27,13 @@
  * call without ever touching the filesystem again, so one transient `EACCES` would make the
  * sandbox permanently unusable rather than merely late.
  */
-import { mkdir, rm, stat } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { mkdir, readdir, rm, stat } from 'node:fs/promises'
+import { constants } from 'node:os'
 import { join } from 'node:path'
+import process from 'node:process'
+import { journalPaths } from './journal'
+import { readJournalState } from './process-state'
 
 /** Characters kept in a directory name, so a sandbox id cannot reshape the path. */
 function sanitize(value: string): string {
@@ -38,16 +43,19 @@ function sanitize(value: string): string {
 /**
  * A short, stable digest of a string, as lowercase hex.
  *
- * FNV-1a, for the reason `../docker/container.ts` gives: the digest only has to separate two
- * ids the sanitizer maps together, so a non-cryptographic hash that needs no async
- * subtle-crypto call is the right size of tool.
+ * SHA-256, truncated. `../docker/container.ts` reaches for FNV-1a on the grounds that the
+ * digest only has to separate two ids the sanitizer maps together, and that a
+ * non-cryptographic hash avoids an async subtle-crypto call — but 32 bits is the wrong size
+ * for what a collision costs here. Two sandboxes whose digests agree share one directory, so
+ * one sandbox's `destroy()` deletes the other's working tree and journal. At 32 bits that is
+ * an even-odds event after about 77,000 sandbox ids, which a long-lived host reaches.
+ *
+ * `node:crypto`'s `createHash` is synchronous, so the reason to avoid a real hash does not
+ * apply: no `await`, no web-crypto. 64 bits of the digest puts the same even-odds point past
+ * five billion ids.
  */
 function shortDigest(value: string): string {
-  let hash = 0x811C9DC5
-  for (let index = 0; index < value.length; index += 1) {
-    hash = Math.imul(hash ^ value.charCodeAt(index), 0x01000193) >>> 0
-  }
-  return hash.toString(16).padStart(8, '0')
+  return createHash('sha256').update(value).digest('hex').slice(0, 16)
 }
 
 /**
@@ -107,11 +115,55 @@ async function isDirectory(path: string): Promise<boolean> {
   }
 }
 
+/**
+ * `SIGKILL` the process groups this sandbox's journal still reports as running.
+ *
+ * `remove()` deletes the tree those processes are writing into, and deleting a directory out
+ * from under a running process does not stop it: on a POSIX filesystem the open `out`/`err`
+ * descriptors survive the unlink, so a detached tree keeps running with its output going to
+ * files nothing can reach. Docker has no equivalent step because `docker rm --force` takes the
+ * container's whole pid namespace with it; the host has no such boundary, so the processes
+ * have to be named and killed.
+ *
+ * The kill targets the group, which is safe for the same reason `./process.ts` gives — the
+ * wrapper is spawned detached and leads its own — and is gated on `alive`, which since the
+ * identity check in `./process-state.ts` means "this pid is still *this* wrapper" rather than
+ * merely "this pid exists".
+ *
+ * Best effort throughout. A sandbox that cannot be read is one whose processes cannot be
+ * named, and failing `remove()` over that would leave the tree behind as well as the process.
+ */
+async function reapJournalledGroups(journalRoot: string): Promise<void> {
+  let entries: string[]
+  try {
+    entries = (await readdir(journalRoot, { withFileTypes: true }))
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
+  }
+  catch {
+    return
+  }
+
+  await Promise.all(entries.map(async (id) => {
+    const state = await readJournalState(journalPaths(journalRoot, id))
+    if (state.pid === undefined || state.exit !== undefined || !state.alive) {
+      return
+    }
+    try {
+      process.kill(-state.pid, constants.signals.SIGKILL)
+    }
+    catch {
+      // Exited between the read and the signal, which is the outcome this wanted anyway.
+    }
+  }))
+}
+
 export function createSandboxRoot(sandboxId: string, options: RootOptions): SandboxRoot {
   const path = join(options.root, sandboxDirName(sandboxId, options.prefix))
   const workDir = join(path, 'work')
   const journalRoot = join(path, 'journal')
   let acquisition: Promise<string> | undefined
+  let teardown: Promise<void> | undefined
 
   const acquire = async (): Promise<string> => {
     // Both are created up front. A sandbox that exists with no journal directory would make
@@ -121,10 +173,28 @@ export function createSandboxRoot(sandboxId: string, options: RootOptions): Sand
     return path
   }
 
-  const ready = (): Promise<string> => (acquisition ??= acquire().catch((cause: unknown) => {
-    acquisition = undefined
-    throw cause
-  }))
+  /**
+   * Acquire, but never *while* a teardown is running.
+   *
+   * Clearing `acquisition` at the top of `remove()` is not enough on its own: an `exec()`
+   * arriving between that line and the `rm` re-runs `acquire()`, sees its `mkdir` succeed, and
+   * hands back a path the `rm` then deletes — so the sandbox reports itself ready over a tree
+   * that no longer exists, and every write into it fails with `ENOENT`. Waiting the teardown
+   * out first makes the recreate land after the delete instead of inside it.
+   *
+   * The loop rather than a single `await`, because a second `remove()` can start while this
+   * one is waiting; the failure of a teardown is not this caller's to raise, so it is awaited
+   * for its timing alone.
+   */
+  const ready = async (): Promise<string> => {
+    for (let pending = teardown; pending !== undefined; pending = teardown) {
+      await pending.catch(() => undefined)
+    }
+    return (acquisition ??= acquire().catch((cause: unknown) => {
+      acquisition = undefined
+      throw cause
+    }))
+  }
 
   return {
     path,
@@ -134,10 +204,19 @@ export function createSandboxRoot(sandboxId: string, options: RootOptions): Sand
     peek: async () => (await isDirectory(path) ? path : undefined),
     remove: async () => {
       acquisition = undefined
-      // `force` so a sandbox that was never created is the state `remove` promises rather
-      // than an error, which is the same reading `../docker/container.ts` gives
-      // `no such container`.
-      await rm(path, { recursive: true, force: true })
+      teardown ??= (async () => {
+        try {
+          await reapJournalledGroups(journalRoot)
+          // `force` so a sandbox that was never created is the state `remove` promises rather
+          // than an error, which is the same reading `../docker/container.ts` gives
+          // `no such container`.
+          await rm(path, { recursive: true, force: true })
+        }
+        finally {
+          teardown = undefined
+        }
+      })()
+      await teardown
     },
   }
 }

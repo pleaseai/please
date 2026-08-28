@@ -92,7 +92,11 @@ export function createMicrosandboxSandbox(
   options: MicrosandboxSandboxOptions = {},
 ): SandboxProvider {
   const handles = new Map<string, MicroVmHandle>()
-  const ports = options.ports ?? new Map<number, number>()
+  // Copied, not aliased: the map decides both what the VM publishes at build time and what
+  // `portEndpoint` answers afterwards. Holding the caller's own map would let a mutation after
+  // the VM is up change the answer without changing the mapping, handing back a URL for a host
+  // port nothing is forwarding.
+  const ports = new Map(options.ports ?? [])
 
   // Cached per sandbox id: `session()` is called per use rather than held across a workflow step,
   // and a fresh handle each time would defeat the lazy acquisition behind it.
