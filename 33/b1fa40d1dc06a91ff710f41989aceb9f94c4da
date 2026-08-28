@@ -1,0 +1,47 @@
+packages/core/src/sandbox/docker/provider.ts
+  s_bdd4816c96dae9::t_d93f1c4d8c36b4 11,105-117
+  s_bdd4816c96dae9::t_0db886f932346c 118
+packages/core/src/agent/workspace.ts
+  s_bdd4816c96dae9::t_6a3765c546ab80 66-71,73
+  s_bdd4816c96dae9::t_b63fa6a7341114 1-65,72,74-89
+packages/core/test/sandbox/define.test.ts
+  s_bdd4816c96dae9::t_167a1d60490219 1-55
+packages/core/src/sandbox/define.ts
+  s_bdd4816c96dae9::t_c64cddb739020a 1-99
+packages/core/test/agent/workspace.test.ts
+  s_bdd4816c96dae9::t_167a1d60490219 1-65
+packages/core/test/agent/turn.test.ts
+  s_bdd4816c96dae9::t_c1d303cae89ca8 1-44
+packages/core/src/sandbox/docker/index.ts
+  s_bdd4816c96dae9::t_d93f1c4d8c36b4 20
+packages/core/package.json
+  s_bdd4816c96dae9::t_c4d6d7d3f9bc9b 18-20
+packages/core/tsup.config.ts
+  s_bdd4816c96dae9::t_c4d6d7d3f9bc9b 6
+packages/core/test/index.test.ts
+  s_bdd4816c96dae9::t_167a1d60490219 10,13-17
+packages/core/src/agent/define.ts
+  s_bdd4816c96dae9::t_c1d303cae89ca8 67-75,77
+  s_bdd4816c96dae9::t_c8b3ea2ebcd836 22
+  s_bdd4816c96dae9::t_c4d6d7d3f9bc9b 1-21,23-66,76,78-170
+packages/core/src/index.ts
+  s_bdd4816c96dae9::t_c4d6d7d3f9bc9b 4-7,9-10,13-22
+packages/core/src/sandbox/index.ts
+  s_bdd4816c96dae9::t_c64cddb739020a 1-18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "33b1fa40d1dc06a91ff710f41989aceb9f94c4da",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
