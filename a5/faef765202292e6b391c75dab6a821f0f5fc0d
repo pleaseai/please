@@ -1,0 +1,24 @@
+packages/core/test/agent/define.test.ts
+  s_bdd4816c96dae9::t_65b6010239666f 1-146,149-184
+  s_bdd4816c96dae9::t_088f98667a3acf 147-148
+packages/core/test/sandbox/docker/provider.test.ts
+  s_bdd4816c96dae9::t_dce59d78717181 1-4,14-18,20,22,24-25,27-28,31,40,68,70-71,73,78-84,86-87,89-93
+  s_bdd4816c96dae9::t_97dd9c9e4840d5 5-13,19,23,26,29-30,32-39,41-67,69,72,74-77,85,88
+  s_bdd4816c96dae9::t_088f98667a3acf 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "a5faef765202292e6b391c75dab6a821f0f5fc0d",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
