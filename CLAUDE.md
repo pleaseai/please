@@ -4,15 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-`please` is intended to become an agent framework. **The repository is currently a scaffold: the
-framework's public API, feature set, and architecture are not designed yet.** Do not invent them —
-do not add exported types, classes, or functions to `@pleaseai/core` on the assumption that some
+`please` is intended to become an agent framework. **Only the declaration layer is designed; the
+rest of the public API, the feature set, and the architecture are not.** `defineAgent` and
+`defineSandbox` exist, and the reasoning behind them is in `docs/project-layout.md`. Everything
+past them — channels, workflows, deploy targets, evals — is still open, so do not invent it: do
+not add exported types, classes, or functions to `@pleaseai/core` on the assumption that some
 shape was agreed. If a task seems to require an API decision, surface the options and ask.
 
 Workspaces:
 
-- `packages/core` (`@pleaseai/core`) — the one published package. `src/index.ts` intentionally
-  exports nothing; the sandbox layer lives behind `./sandbox/*` subpaths.
+- `packages/core` (`@pleaseai/core`) — the one published package. The root export carries
+  `defineAgent` and the workspace helpers; the sandbox layer lives behind `./sandbox/*` subpaths.
 - `examples/*` — one private package per example, never published. They are type-checked with
   everything else, so an example that stops compiling against the core API fails CI.
 
