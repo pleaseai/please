@@ -20,7 +20,7 @@ export type { ContainerHandle, ContainerOptions } from './container'
 export { JOURNAL_ROOT, journalPaths } from './journal'
 export type { JournalMeta, JournalPaths } from './journal'
 
-export { containerEnv, createDockerSandbox, DEFAULT_IMAGE } from './provider'
+export { containerEnv, createDockerSandbox, DEFAULT_IMAGE, docker } from './provider'
 export type { DockerSandboxOptions } from './provider'
 
 export { createDockerSession } from './session'

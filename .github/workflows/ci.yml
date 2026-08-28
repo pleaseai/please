@@ -46,29 +46,34 @@ jobs:
         run: bun run test:coverage
 
       # bun writes lcov SF: paths relative to the package dir (src/index.ts),
-      # but Codecov and Sonar resolve them from the repo root - rewrite them once
+      # but Codecov and Sonar resolve them from the repo root - rewrite them once.
+      # Every package that emitted a report, so adding one needs no change here.
       - name: Normalize coverage paths
-        if: ${{ !cancelled() && hashFiles('packages/core/coverage/lcov.info') != '' }}
-        run: sed -i '/^SF:packages\//! s|^SF:|SF:packages/core/|' packages/core/coverage/lcov.info
+        if: ${{ !cancelled() && hashFiles('packages/*/coverage/lcov.info') != '' }}
+        run: |
+          for report in packages/*/coverage/lcov.info; do
+            package=$(dirname "$(dirname "$report")")
+            sed -i "/^SF:packages\//! s|^SF:|SF:$package/|" "$report"
+          done
 
       - name: Build
         run: bun run build
 
       # Tests may pass and a later step fail - still report what was measured
       - name: Upload coverage to Codecov
-        if: ${{ !cancelled() && hashFiles('packages/core/coverage/lcov.info') != '' }}
+        if: ${{ !cancelled() && hashFiles('packages/*/coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
-          files: ./packages/core/coverage/lcov.info
+          files: ./packages/core/coverage/lcov.info,./packages/cli/coverage/lcov.info
           use_oidc: true
 
       # Failed tests are what this reports, so it must run when the suite fails
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && hashFiles('packages/core/test-report.junit.xml') != '' }}
+        if: ${{ !cancelled() && hashFiles('packages/*/test-report.junit.xml') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           report_type: test_results
-          files: ./packages/core/test-report.junit.xml
+          files: ./packages/core/test-report.junit.xml,./packages/cli/test-report.junit.xml
           use_oidc: true
 
       - name: SonarQube scan

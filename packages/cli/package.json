@@ -1,0 +1,23 @@
+{
+  "name": "@pleasedev/cli",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pleaseai/please.git",
+    "directory": "packages/cli"
+  },
+  "scripts": {
+    "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov --reporter=junit --reporter-outfile=test-report.junit.xml",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "typescript": "^6"
+  }
+}

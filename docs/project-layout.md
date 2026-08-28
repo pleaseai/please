@@ -1,32 +1,42 @@
 # Project layout
 
-> **Status: proposal, not a decision.** No layout below is implemented, no signature is settled, and
-> `@pleasedev/core`'s root export is still empty. This note exists so the layout argument can be had
-> against something concrete. Treat every directory below as a candidate.
+> **Status: partly decided, 2026-08-28.** The syntax question is settled and implemented —
+> `defineAgent` and `defineSandbox` exist, `@pleasedev/core`'s root export is no longer empty, and
+> `examples/claude-code-docker` runs on them. See [The syntax question](#the-syntax-question-and-why-it-is-defineagent).
 >
-> Open questions 1 and 2 are the exception: both have been **answered by measurement**, and the
-> sandbox layer written to answer them is real code (`@pleasedev/core/sandbox`). Everything those
-> answers changed is marked below.
+> Open questions 1 and 2 are **answered by measurement**; what they turned on is now also
+> **confirmed in the Agent SDK's own documentation**, which is why no third probe was written.
+>
+> Still a proposal: the directory list under [A layout that follows from
+> that](#a-layout-that-follows-from-that) beyond `agent.ts`, `sandbox.ts` and `workspace/`, and
+> open questions 3 and 4.
 
 The facts this argument rests on are recorded with sources and dates in
 [`prior-art.md`](./prior-art.md). Where the two disagree, `prior-art.md` is the record and this note
 is the interpretation.
 
-## The contract already answered the first question
+## The first question answered itself backwards
 
 The obvious first decision looked like a choice: keep harness-native assets in their own format, or
-receive them in a neutral one and convert. That choice does not exist.
+receive them in a neutral one and convert. This note originally recorded that the choice did not
+exist, because the AI SDK's `skills` option accepts inline objects only —
+`{ name, description, content, files?: [{ path, content }] }`, no path and no directory — so
+anything handed to *that option* had to be read off disk and rebuilt before construction.
 
-`skills` accepts inline objects only — `{ name, description, content, files?: [{ path, content }] }`.
-No documented form takes a path or a directory. Anything handed to *that option* has to be read off
-disk and built into those objects before the agent is constructed, so the question there is not
-*whether* we build but *what we treat as the source format*: the `.claude/skills` shape, or one of
-our own.
+That reading was right about the option and wrong about the runtime. The Agent SDK's own
+documentation (read 2026-08-28) says the opposite of what the wrapper implies: **"Skills must be
+created as filesystem artifacts (`.claude/skills/<name>/SKILL.md`). The SDK does not have a
+programmatic API for registering skills."** The `skills` option selects which discovered skills are
+enabled; it does not register any. And the adapter implements its inline form by *writing those
+objects to disk* — `$HOME/.claude/skills/<name>/SKILL.md` — before querying.
 
-What has changed since this was written is that the option is no longer the only door. A
-`.claude/skills/` directory seeded into the session workdir is in scope for the runtime by the same
-mechanism that makes a seeded `CLAUDE.md` work — see open question 1. That turns a settled
-constraint back into a choice between two routes.
+So the direction is the reverse of the one assumed here. A directory is the native format, and the
+inline object is a wrapper over it. Converting a `.claude/skills/` tree into inline objects would
+be building a lossy encoder for a format the runtime already reads. The same sentence covers
+`.claude/agents/` and `.claude/commands/`, which the adapter exposes no option for at all.
+
+That is what makes `workspace` a declared input on `defineAgent` rather than a hook a user writes:
+it is not a convenience over `onSession`, it is the only route these features have.
 
 Two more shapes constrain the layout directly:
 
@@ -48,10 +58,11 @@ contract as documented, that splits:
 | Native conversation state and compaction | comes along |
 | Session and resume (`detach()` / `stop()` → `sessionId` + `resumeFrom`) | comes along |
 | Durable workflow stepping (`@ai-sdk/workflow-harness`) | comes along |
-| Skills | rebuilt as inline objects, or seeded as a directory — see open question 1 |
+| Skills | comes along **as files** — `.claude/skills/` is the runtime's native format; the adapter's inline option is a wrapper that writes the same files |
 | Permission model | three modes, but a seeded `.claude/settings.json` `deny` rule outranks all three — measured |
 | Hooks | absent from the adapter's settings, but a seeded `.claude/settings.json` runs them — measured |
-| Plugins, slash commands, subagents | absent from the adapter's settings; same directory as hooks, so likely reachable, unmeasured |
+| Subagents, slash commands | absent from the adapter's settings; documented as loaded from a seeded `.claude/`, and a seeded subagent is invoked in `examples/claude-code-docker` |
+| Plugins | absent from the adapter's settings; the SDK has a `plugins` option the adapter does not expose, so untested here |
 
 `createClaudeCode()` takes `auth`, `credentialForwarding`, `mcpServers`, `model`, `maxTurns`, `env`,
 `thinking`, `effort`, `port`, `portEndpoint`, `startupTimeoutMs` and `mintBridgeToken`, and is built
@@ -78,39 +89,59 @@ different lifetimes:
 | Authored | Route | Lives as long as |
 | --- | --- | --- |
 | bootstrap material | `onBootstrap`, once during template creation | the snapshot, until `bootstrapHash` changes |
-| skills | built into `skills[]` before construction | the agent instance |
-| skills, alternatively | `onSession` into `.claude/skills/` | the session |
-| workspace files | `onSession` + `writeTextFile`, every session | the session |
+| workspace files, `.claude/` included | `onSession` + `writeTextFile`, every session | the session |
+| skills, via the adapter | built into `skills[]`, which the adapter writes to `$HOME/.claude/skills/` | the session |
 
 Host-executed tools are a fourth case and not a route at all: they never enter the sandbox.
 
-The `onSession` route carries more than plain workspace files. It is also how a `.claude/` directory
-reaches the runtime, which is the only route any of the harness's directory-sourced features have —
-and it is why skills appear twice in that table. The two rows are the same asset with different
-lifetimes, and choosing between them is open question 1's leftover.
+Skills used to occupy two rows here, and choosing between them was open question 1's leftover. It
+is not a choice between two formats any more, because both rows end as files on disk — the
+difference is only *which* directory and who writes it. The workspace row is the one to author
+against: it is project-level, it is the same route `CLAUDE.md`, hooks, subagents and commands
+already take, and it is the row an existing Claude Code project already fits. The adapter row
+remains useful for a skill computed at runtime, which has no directory to be read from.
 
 A layout that files these together hides which is which. Reading a directory should tell you when
 its contents appear and how long they last.
 
 ## A layout that follows from that
 
-```
+```text
 src/
-  app.ts             # required — server + routes (flue-style)
-  agent.ts           # adapter + sandbox + instructions
+  agent.ts           # defineAgent — harness, sandbox, workspace, instructions   [implemented]
+  sandbox.ts         # defineSandbox — backend, placement, onCreate / onSession  [implemented]
+  workspace/         # → onSession + writeTextFile, every session                [implemented]
+                     #   CLAUDE.md, .claude/{skills,agents,commands,settings.json}
 
   bootstrap/         # → onBootstrap. baked into the snapshot, invalidated by bootstrapHash
-  skills/            # → skills[] or a seeded .claude/skills/ — route undecided, see question 1
-  workspace/         # → onSession + writeTextFile. rewritten every session
-
   host-tools/        # → tools. runs on the host, not in the sandbox
   channels/          # slack.ts / github.ts / linear.ts (path is the name, eve-style)
   workflows/         # 'use step' wrappers over @ai-sdk/workflow-harness runners
 
-  cloudflare.ts      # optional — target entrypoint
+  app.ts             # server + routes, where there is a server (flue-style)
+  cloudflare.ts      # optional — target entrypoint, and where a backend is chosen
   vercel.ts          # optional
 evals/               # beside src, not inside (eve-style)
 ```
+
+**`skills/` is gone from this list**, and its absence is the answer to the question the first
+section asked. Skills are files the runtime reads from `.claude/skills/`, so they live inside
+`workspace/` with everything else the runtime discovers by path. A top-level `skills/` would be a
+second home for one thing, which is the outcome the README's "its ecosystem comes along" argument
+exists to avoid.
+
+**Singular file, not plural directory**, for `agent.ts` and `sandbox.ts`. There is one of each, and
+a folder whose membership is permanently one is a folder that mislabels itself. The rule scales the
+obvious way — `agents/` and `sandboxes/` when a project genuinely has several, and then both go
+plural together rather than one of them drifting. flue's `sandboxes/daytona.ts` is not a
+counterexample: it holds a *backend adapter*, the slot `@pleasedev/core/sandbox/docker` already
+fills, not the configuration of one deployment.
+
+**A second backend belongs to the entrypoint.** Local development runs Docker and production will
+not; eve's advice to use the same backend everywhere is not available to us, because standing up a
+Cloudflare sandbox locally costs more than the Docker backend exists to save. The split therefore
+lands on `cloudflare.ts` building the definition over a different backend, not on a directory of
+alternatives for `agent.ts` to choose between.
 
 `host-tools/` rather than `tools/`, because the name is the only defence. Everything else in that
 list describes the inside of the sandbox and this one does not, and the difference shows up as a
@@ -129,6 +160,47 @@ Not borrowed: `tools/`, `skills/` and `subagents/` as *framework* concepts. flue
 those because they own the agent loop. We do not, and defining them again would produce two of
 everything — which is the cost the README's "its ecosystem comes along" argument exists to avoid.
 
+## The syntax question, and why it is `defineAgent`
+
+Decided 2026-08-28, between eve's `defineAgent({ … })` and flue's `'use agent'` directive with
+hooks. The layout above is eve's lineage; so is the syntax, for three reasons that survived being
+argued against.
+
+**A directive needs a compiler, and we have two targets.** flue's `'use agent'` is resolved by a
+Vite plugin. A framework that treats Cloudflare and Vercel as equally first-class would owe that
+transform to both pipelines, and without it the source does not run at all. `defineAgent` is a
+function call: it runs wherever the module does.
+
+That cuts close to a transform this project *does* need — `workspace` is a path, and a Worker has
+no filesystem, so a deploy has to inline the directory into the bundle. The two are not the same
+obligation. Inlining turns one value into an asset and has a working fallback (read the path from
+the host filesystem, which is what a local run does today); a directive rewrites the meaning of
+every source file and has none. One is a deploy optimisation, the other a precondition.
+
+**Hooks would re-do what the SDK already does.** `useTool` earns its place in flue because flue
+owns the agent loop and the tool set is its own. Here the tool set is the harness's, and the one
+thing a hook would still inject — a tool's execution context — arrives as an argument already:
+`execute(args, { experimental_sandbox })`. Adding a hook context would mean two injections of the
+same thing.
+
+**Client tools outlive a render.** A tool without `execute` pauses the turn until something outside
+submits its result, possibly in another process via `continueFrom`. A tool defined as a value is
+re-loaded there by importing the same module; a hook's context is not something a second process
+can re-enter.
+
+What the decision explicitly does **not** include: wrapping the harness adapter.
+`harness: createClaudeCode(…)` is imported from `@ai-sdk/harness-claude-code` and passed through.
+A `@pleasedev/core/harness/claude-code` was drafted and withdrawn — it would buy nothing, and it
+would turn "does Codex work" into a question about this package rather than about the AI SDK's
+adapter contract.
+
+One thing is genuinely new rather than borrowed: `defineSandbox({ onCreate })`, which runs against
+the container *before* the adapter bootstraps in it. The AI SDK has no hook that early —
+`onBootstrap` runs after the adapter's own bootstrap, `onSession` after the session exists — so
+anything the adapter's first command depends on has nowhere to go. A backend that owns its
+container can be earlier than the harness, and that is the one place this framework can act where
+the AI SDK cannot.
+
 ## Open questions
 
 **1. Does a seeded `.claude` directory mean anything? — ANSWERED: yes (2026-08-27).**
@@ -140,11 +212,21 @@ and the hook's marker file was there afterwards.
 Two consequences. The `workspace/` route is not just for workspace files — it is the route for
 everything the runtime reads out of a directory, which is why hooks moved rows in the table above.
 And `skills/` no longer has to be built into inline objects to reach the runtime at all: a seeded
-`.claude/skills/` is in scope for the same reason `CLAUDE.md` is. Two caveats keep that from being
-settled. Only `CLAUDE.md` and a hook were measured; skills, subagents, slash commands and plugins
-were not. And the adapter writes its own inline `skills` to `$HOME/.claude/skills/<name>/SKILL.md`
-and queries with `skills: 'all'`, so a seeded project-level directory and the `skills` option would
-be two sources for one thing — which is open question 2's problem, arriving a second time.
+`.claude/skills/` is in scope for the same reason `CLAUDE.md` is.
+
+The caveat this section used to carry — that only `CLAUDE.md` and a hook were measured, leaving
+skills, subagents and commands as inference — was closed on 2026-08-28 by the Agent SDK's own
+documentation rather than by a third probe: omitting `settingSources` "is equivalent to
+`["user", "project", "local"]`", and those sources load "CLAUDE.md files, and `.claude/` skills,
+agents, and commands". `examples/claude-code-docker` exercises the subagent half end to end — the
+turn's `Agent` tool call comes from a `.claude/agents/verifier.md` that exists only in the seeded
+workspace.
+
+What the documentation adds, and a probe would not have found, is where each source reads from.
+Project `settings.json` and hooks load from `<cwd>/.claude/` with **no parent-directory fallback**,
+while `CLAUDE.md` is found from any parent and skills, commands and subagents from any parent up to
+the repository root. Seeding everything to the session's own directory is therefore correct, but
+only the first of those actually requires it.
 
 **2. Where do permissions come from? — ANSWERED: a seeded `deny` outranks `permissionMode`
 (2026-08-28).**

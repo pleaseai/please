@@ -15,9 +15,9 @@
       "import": "./dist/index.js"
     },
     "./sandbox": {
-      "bun": "./src/sandbox/contract/index.ts",
-      "types": "./dist/sandbox/contract/index.d.ts",
-      "import": "./dist/sandbox/contract/index.js"
+      "bun": "./src/sandbox/index.ts",
+      "types": "./dist/sandbox/index.d.ts",
+      "import": "./dist/sandbox/index.js"
     },
     "./sandbox/harness": {
       "bun": "./src/sandbox/harness/index.ts",

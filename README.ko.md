@@ -25,11 +25,13 @@
 - **청구서를 결정한다.** Claude Code를 하네스로 구동하면 Claude Code 구독으로 돈다. 직접 만든 루프를
   Messages API에 물리면 같은 일을 토큰 단위로 청구한다.
 
-딸려 오지 **않는** 것도 기록에 남아 있다. 스킬은 디렉터리에서 읽히는 대신 인라인 객체로 넘겨야 한다.
-어댑터 *설정*에는 훅이 없고 권한 모드도 셋뿐이다 — 다만 설정만이 들어가는 길은 아니다. 세션 작업
-디렉터리에 심은 `.claude/settings.json`은 실제로 읽히고, 실행 프로브가 그 두 가지 결과를 측정했다.
-거기 선언한 훅은 실행되고, 거기 쓴 `deny` 규칙은 어댑터의 권한 모드를 덮어쓴다 — 런타임에 권한 검사를
-아예 건너뛰라고 요청하는 모드까지 포함해서다. [`docs/project-layout.md`](docs/project-layout.md) 참고.
+딸려 오지 **않는** 것도 기록에 남아 있고, 그 목록은 계속 줄어들고 있다. 어댑터 *설정*에는 훅도 스킬도
+서브에이전트도 없고 권한 모드도 셋뿐이다 — 다만 설정은 들어가는 길이 아니다. 런타임은 그것들을 세션
+작업 디렉터리의 `.claude/` 에서 읽는다. 이미 있는 Claude Code 프로젝트는 거기 놓이는 것만으로 그대로
+넘어오고, 어댑터의 인라인 `skills` 옵션은 결국 같은 파일을 써 주는 껍데기다. 실행 프로브가 그중 둘을
+측정했다 — 거기 선언한 훅은 실행되고, 거기 쓴 `deny` 규칙은 어댑터의 권한 모드를 덮어쓴다. 런타임에
+권한 검사를 아예 건너뛰라고 요청하는 모드까지 포함해서다. 나머지는 Agent SDK 자체 문서가 답한다.
+[`docs/project-layout.md`](docs/project-layout.md) 참고.
 
 하네스 경계 자체도 우리 것이 아니다 — AI SDK의
 [harness agent](https://ai-sdk.dev/docs/ai-sdk-harnesses/harness-agent)와
@@ -70,15 +72,13 @@
 
 ## 상태
 
-**프레임워크 API는 아직 설계되지 않았다.** `@pleasedev/core`의 루트 export는 일부러 비어 있다. 우연히
-생긴 표면이 확정된 것처럼 인용되는 일을 막기 위해서다.
-
-한 계층만 존재한다. 열린 질문들을 그것 없이는 답할 수 없었기 때문이다 — **샌드박스**다. 루트가 아니라
-전용 서브패스로만 닿는다.
+**API의 일부는 설계됐고, 위 범위의 대부분은 아직이다.** 존재하는 것은 일부러 작고, 실제로 돈다 —
+[`examples/claude-code-docker`](examples/claude-code-docker)가 그 위에서 진짜 턴을 구동한다.
 
 | 서브패스 | 무엇인가 |
 | --- | --- |
-| `@pleasedev/core/sandbox` | 백엔드 계약 — 벤더 중립 타입 |
+| `@pleasedev/core` | `defineAgent` — 하네스 어댑터, 샌드박스, 그리고 그 안으로 실어 나르는 워크스페이스 디렉터리 |
+| `@pleasedev/core/sandbox` | `defineSandbox`와 백엔드 계약 — 벤더 중립 타입 |
 | `@pleasedev/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
 | `@pleasedev/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
 | `@pleasedev/core/sandbox/local` | 호스트 프로세스 백엔드 — 데몬도 이미지도, **격리도 없다**. 같은 이유로 호스트 전용 |
@@ -88,21 +88,27 @@
 하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
 호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
 
+여기서 API보다 중요한 것은 두 가지 모양이다. **하네스 어댑터는 감싸지 않는다.** `createClaudeCode()`는
+`@ai-sdk/harness-claude-code`에서 와서 그대로 전달된다. 그 경계는 AI SDK의 것이고, 여기서 한 겹 두르면
+그것을 영영 쫓아다닐 의무만 생긴다. 그리고 **`workspace`는 선언된 입력이다.** 어떤 어댑터도 `agents`,
+`skills`, `settingSources` 를 노출하지 않으므로, 그 기능들이 실행에 닿는 길은 디렉터리 하나뿐이기
+때문이다.
+
 네 백엔드 중 셋은 전제 조건이 갖춰진 곳에서 실제로 도는 스위트를 갖고 있다 — `local` 과 `just-bash`
 는 어디서나, `docker` 는 데몬에 닿을 수 있는 곳에서. **microsandbox** 는 예외이고, 그 사실을 감추지
 않는다: `microsandbox` 는 이 백엔드가 작성된 플랫폼인 `darwin-x64` 용 네이티브 애드온을 제공하지
 않고, Linux CI 러너에서는 애드온은 로드되지만 하이퍼바이저가 없어 게스트가 에이전트 릴레이가
 올라오기 전에 죽는다. 그래서 동작 스위트가 통과하는 것을 아직 한 번도 관측하지 못했고, 게이트는
 import 검사가 아니라 일회용 부팅이다 — 두 호스트 어느 쪽도 돌지 않은 스위트를 초록으로 보고하지
-않도록. 어디서나 검사되는 것은 벤더 타입의
-구조적 사본이 벤더의 선언과 여전히 일치하는지다 — `test/sandbox/microsandbox/vendor-shape.test.ts`,
-`tsc` 가 강제한다.
+않도록. 어디서나 검사되는 것은 벤더 타입의 구조적 사본이 벤더의 선언과 여전히 일치하는지다 —
+`test/sandbox/microsandbox/vendor-shape.test.ts`, `tsc` 가 강제한다.
 
 정해진 것: 위 범위 표, 이름, 라이선스(Apache-2.0), 스택([Bun](https://bun.sh), TypeScript,
-[Turborepo](https://turborepo.com)), 그리고 위의 샌드박스 분리.
+[Turborepo](https://turborepo.com)), 샌드박스 분리, 그리고 선언 문법 — 컴파일러가 필요한 디렉티브가
+아니라 `defineAgent` / `defineSandbox`. 근거는 [`docs/project-layout.md`](docs/project-layout.md)에 있다.
 
-정해지지 않은 것: **나머지 API.** 에이전트를 어떻게 선언하는지, 프로젝트 레이아웃이 컨벤션 기반인지
-설정 기반인지, 워크플로를 어떻게 표현하는지, 채널 핸들러가 무엇을 받는지, eval을 어떻게 쓰는지. 설계 논의는
+정해지지 않은 것: **나머지 대부분.** 워크플로를 어떻게 표현하는지, 채널 핸들러가 무엇을 받는지, eval을
+어떻게 쓰는지, 파일시스템이 없는 타깃을 위해 워크스페이스를 어느 단계에서 번들에 인라인하는지. 설계 논의는
 [Discussions](https://github.com/pleaseai/please/discussions/categories/ideas)에서 한다. 이슈는 버그 보고용이다.
 
 ## 요구사항
@@ -135,18 +141,31 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/                      # @pleasedev/core — 루트 export는 일부러 비어 있다
-    src/sandbox/
-      contract/              # 백엔드 계약
-      harness/               # 그 계약 위의 HarnessV1SandboxProvider
-      docker/                # 로컬 Docker 백엔드 (호스트 전용)
-      local/                 # 호스트 프로세스 백엔드 (호스트 전용, 격리 없음)
-      just-bash/             # 가상 셸 백엔드 (호스트 프로세스 없음, 실제 바이너리 없음)
-      microsandbox/          # microVM 백엔드 (호스트 전용, 하이퍼바이저 격리)
+  core/                      # @pleasedev/core
+    src/
+      agent/                 # defineAgent, 그리고 세션으로 들어가는 워크스페이스 경로
+      sandbox/
+        contract/            # 백엔드 계약
+        harness/             # 그 계약 위의 HarnessV1SandboxProvider
+        docker/              # 로컬 Docker 백엔드 (호스트 전용)
+        local/               # 호스트 프로세스 백엔드 (호스트 전용, 격리 없음)
+        just-bash/           # 가상 셸 백엔드 (호스트 프로세스 없음, 실제 바이너리 없음)
+        microsandbox/        # microVM 백엔드 (호스트 전용, 하이퍼바이저 격리)
     scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
+  cli/                       # @pleasedev/cli — 아직 배포하지 않는다. 명령어가 없다
+    src/ui/                  # 세션이 시작되기 전에 `please dev`가 그리는 부팅 크롬
+examples/
+  claude-code-docker/        # 로컬 컨테이너 안의 Claude Code. 위 API로 작성됐다
 docs/
-  prior-art.md               # eve, flue, AI SDK 하네스가 이미 하고 있는 것
-  project-layout.md          # 레이아웃 제안과, 그것이 기다리는 열린 질문들
+  prior-art.md               # eve, flue, AI SDK 하네스, Agent SDK가 이미 하고 있는 것
+  project-layout.md          # 레이아웃 논증, 정해진 것, 아직 열린 것
+  dev-tui.md                 # `please dev`: 정해진 것과, 아직 기다리는 것
+```
+
+예제는 실행할 수 있고, 이 프레임워크가 무엇을 하고 무엇을 하지 않는지 보는 가장 짧은 길이다.
+
+```bash
+bun run examples/claude-code-docker/index.ts   # Docker와 Anthropic 자격 증명이 필요하다
 ```
 
 `packages/core/scripts/` 아래 세 프로브는 실행할 수 있고, 각각 문서가 아니면 추측에 그쳤을 질문에
@@ -164,8 +183,12 @@ bun run packages/core/scripts/probe-permissions.ts        # Anthropic 자격 증
 — 각자의 공식 문서에서, 날짜와 함께 — 기록한다. 여기서의 설계 논의가 기억이 아니라 존재하는 것에서
 출발하도록.
 
-[`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 첫 번째 논증이다. 제안 레이아웃,
-계약이 이미 우리 대신 정해 버린 것들, 그리고 아직 열려 있는 질문들.
+[`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 논증이다. 계약이 이미 우리 대신
+정해 버린 것들, 선언 문법이 디렉티브가 아니라 함수인 이유, 그리고 아직 열려 있는 질문들.
+
+[`docs/dev-tui.md`](docs/dev-tui.md)은 그 위에 얹힌 논증이다. 대화형 `please dev`가 터미널을
+[`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui)와 eve에서 이식한 부팅 크롬
+사이에 어떻게 나누는지, 그리고 그 명령어가 아직 어떤 `defineAgent` 결정을 기다리고 있는지.
 
 ## 기여
 

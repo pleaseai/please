@@ -27,12 +27,14 @@ Two things follow from reusing the harness instead:
 - **It decides the bill.** Driving Claude Code as a harness runs on a Claude Code subscription. A
   hand-rolled loop against the Messages API bills per token for the same work.
 
-What does *not* come along is on the record too: skills have to be handed over as inline objects
-rather than read from a directory. The adapter's *settings* also carry no hooks and only three
-permission modes — but the settings are not the only way in. A `.claude/settings.json` seeded into
-the session workdir is read, and live probes measured both consequences: a hook declared there
-runs, and a `deny` rule there overrides the adapter's permission mode, including the mode that asks
-the runtime to skip permission checks altogether. See
+What does *not* come along is on the record too, and it keeps shrinking. The adapter's *settings*
+carry no hooks, no skills, no subagents and only three permission modes — but the settings are not
+the way in. The runtime reads all of it from a `.claude/` directory in the session's own working
+directory, so an existing Claude Code project carries over by being placed there; the adapter's
+inline `skills` option is a wrapper that writes those same files. Live probes measured two of the
+consequences — a seeded hook runs, and a seeded `deny` rule overrides the adapter's permission
+mode, including the mode that asks the runtime to skip permission checks altogether — and the
+Agent SDK's own documentation covers the rest. See
 [`docs/project-layout.md`](docs/project-layout.md).
 
 The harness boundary itself is not ours either — it is the AI SDK's
@@ -78,15 +80,13 @@ stream, a socket) that pretending they are one thing is how the abstraction goes
 
 ## Status
 
-**The framework API is still undesigned.** `@pleasedev/core`'s root export is deliberately empty,
-so no accidental surface can be quoted back as if it were settled.
-
-One layer does exist, because it was the layer the open questions could not be answered without: the
-**sandbox**. It is reached through its own subpath exports, never the root.
+**Part of the API is designed; most of the scope above is not.** What exists is small on purpose
+and it runs — [`examples/claude-code-docker`](examples/claude-code-docker) drives a real turn on it.
 
 | Subpath | What it is |
 | --- | --- |
-| `@pleasedev/core/sandbox` | the backend contract — vendor-neutral types |
+| `@pleasedev/core` | `defineAgent` — a harness adapter, a sandbox, and the workspace directory carried into it |
+| `@pleasedev/core/sandbox` | `defineSandbox`, plus the backend contract — vendor-neutral types |
 | `@pleasedev/core/sandbox/harness` | the contract rendered as AI SDK `HarnessV1SandboxProvider`, written once for every backend |
 | `@pleasedev/core/sandbox/docker` | a local Docker backend. **Host-only** — it spawns the `docker` CLI, so it must never reach a Worker bundle |
 | `@pleasedev/core/sandbox/local` | a host-process backend — no daemon, no image, **and no isolation**. Host-only for the same reason |
@@ -96,23 +96,30 @@ One layer does exist, because it was the layer the open questions could not be a
 Splitting the harness translation from the backends is what keeps a second backend from re-deriving
 it, and the subpaths are what keep host-only code out of a target that cannot run it.
 
+Two shapes are the argument rather than the API. The **harness adapter is never wrapped**:
+`createClaudeCode()` comes from `@ai-sdk/harness-claude-code` and is passed straight through,
+because that boundary is the AI SDK's and a wrapper here would only be an obligation to chase it.
+And **`workspace` is a declared input**, because no adapter exposes `agents`, `skills` or
+`settingSources` — a directory is the only route those have into a run.
+
 Three of the four backends are covered by suites that run wherever their prerequisite is present —
 `local` and `just-bash` everywhere, `docker` where a daemon is reachable. The **microsandbox**
 backend is the exception and says so rather than implying otherwise: `microsandbox` ships no native
 addon for `darwin-x64`, which is the platform it was written on, and on the Linux CI runner the
 addon loads but the guest dies before its agent relay comes up, for want of a hypervisor. So its
 behavioural suite has never been observed to pass, and its gate is a throwaway boot rather than an
-import check, so that neither host reports a green suite it never ran. What *is* checked everywhere is that its structural copies of the vendor's
-types still match the vendor's own declarations — `test/sandbox/microsandbox/vendor-shape.test.ts`,
-enforced by `tsc`.
+import check, so that neither host reports a green suite it never ran. What *is* checked everywhere
+is that its structural copies of the vendor's types still match the vendor's own declarations —
+`test/sandbox/microsandbox/vendor-shape.test.ts`, enforced by `tsc`.
 
 Decided: the scope table above, the name, the license (Apache-2.0), the stack
-([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)), and the sandbox split
-described above.
+([Bun](https://bun.sh), TypeScript, [Turborepo](https://turborepo.com)), the sandbox split, and the
+declaration syntax — `defineAgent` / `defineSandbox` rather than a compiler-backed directive,
+argued in [`docs/project-layout.md`](docs/project-layout.md).
 
-Undecided: **the rest of the API**. How an agent is declared, whether the project layout is
-convention- or config-driven, how a workflow is expressed, what a channel handler receives, how
-evals are written. Design discussion belongs in
+Undecided: **most of the rest**. How a workflow is expressed, what a channel handler receives, how
+evals are written, and where a deployment inlines the workspace for a target with no filesystem.
+Design discussion belongs in
 [Discussions](https://github.com/pleaseai/please/discussions/categories/ideas); issues are for bugs.
 
 ## Requirements
@@ -143,20 +150,33 @@ mise run ci         # lint + type-check + test + build
 
 ## Layout
 
-```
+```text
 packages/
-  core/                      # @pleasedev/core — root export is deliberately empty
-    src/sandbox/
-      contract/              # the backend contract
-      harness/               # HarnessV1SandboxProvider over that contract
-      docker/                # local Docker backend (host-only)
-      local/                 # host-process backend (host-only, unisolated)
-      just-bash/             # virtual-shell backend (no host process, no real binaries)
-      microsandbox/          # microVM backend (host-only, hypervisor-isolated)
+  core/                      # @pleasedev/core
+    src/
+      agent/                 # defineAgent, and the workspace route into a session
+      sandbox/
+        contract/            # the backend contract
+        harness/             # HarnessV1SandboxProvider over that contract
+        docker/              # local Docker backend (host-only)
+        local/               # host-process backend (host-only, unisolated)
+        just-bash/           # virtual-shell backend (no host process, no real binaries)
+        microsandbox/        # microVM backend (host-only, hypervisor-isolated)
     scripts/                 # probes that measure the runtime rather than assume it
+  cli/                       # @pleasedev/cli — unreleased; has no command yet
+    src/ui/                  # the boot chrome `please dev` draws before the session starts
+examples/
+  claude-code-docker/        # Claude Code in a local container, built on the API above
 docs/
-  prior-art.md               # what eve, flue and the AI SDK harnesses already do
-  project-layout.md          # a proposed layout, and the open questions it waits on
+  prior-art.md               # what eve, flue, the AI SDK harnesses and the Agent SDK already do
+  project-layout.md          # the layout argument, what is settled, and what is still open
+  dev-tui.md                 # `please dev`: what is decided, and what it waits on
+```
+
+The example is runnable, and is the shortest way to see what the framework does and does not do:
+
+```bash
+bun run examples/claude-code-docker/index.ts   # needs Docker and an Anthropic credential
 ```
 
 The three probes under `packages/core/scripts/` are runnable, and each answers a question the docs
@@ -174,8 +194,14 @@ bun run packages/core/scripts/probe-permissions.ts        # needs an Anthropic c
 actually do — read from their own documentation, with dates — so that design arguments here start
 from what exists rather than from recollection.
 
-[`docs/project-layout.md`](docs/project-layout.md) is the first argument built on that record: a
-proposed layout, what the contract already decides for us, and the questions still open.
+[`docs/project-layout.md`](docs/project-layout.md) is the argument built on that record: what the
+contract already decides for us, why the declaration syntax is a function rather than a directive,
+and the questions still open.
+
+[`docs/dev-tui.md`](docs/dev-tui.md) is the one built on top of that: how an interactive
+`please dev` divides the terminal between
+[`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui) and a boot chrome ported from
+eve, and which `defineAgent` decisions the command is still waiting on.
 
 ## Contributing
 
