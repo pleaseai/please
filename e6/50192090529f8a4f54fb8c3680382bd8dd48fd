@@ -1,0 +1,36 @@
+packages/cli/src/ui/theme.ts
+  s_512bec718b13bc::t_b37bc4b3592a55 45-51
+packages/cli/src/ui/progress-pulse.ts
+  s_512bec718b13bc::t_149a8b93844878 38-42
+packages/cli/src/ui/sanitize.ts
+  s_512bec718b13bc::t_b37bc4b3592a55 13-19
+  s_512bec718b13bc::t_48fa4df6a6bd7c 49-62,123-124,128-135,137,143-144,146-147
+  s_512bec718b13bc::t_b8106095622db8 136,138-142,145
+packages/cli/test/ui/sanitize.test.ts
+  s_512bec718b13bc::t_ae268cefe7d4df 35-51
+packages/cli/test/ui/boot-row.test.ts
+  s_512bec718b13bc::t_ae268cefe7d4df 57-72
+packages/cli/test/ui/progress-pulse.test.ts
+  s_512bec718b13bc::t_ae268cefe7d4df 34-41
+packages/cli/test/ui/theme.test.ts
+  s_512bec718b13bc::t_9cda1105bc7432 31-66
+  s_512bec718b13bc::t_ae268cefe7d4df 7,30
+packages/cli/src/ui/boot-row.ts
+  s_512bec718b13bc::t_149a8b93844878 180-183
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "e650192090529f8a4f54fb8c3680382bd8dd48fd",
+  "prompts": {},
+  "sessions": {
+    "s_512bec718b13bc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b0fb0680-b744-4f6e-82af-422f495c1b93",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
