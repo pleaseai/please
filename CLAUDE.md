@@ -11,7 +11,10 @@ shape was agreed. If a task seems to require an API decision, surface the option
 
 Workspaces:
 
-- `packages/core` (`@pleaseai/core`) — the one package. `src/index.ts` intentionally exports nothing.
+- `packages/core` (`@pleaseai/core`) — the one published package. `src/index.ts` intentionally
+  exports nothing; the sandbox layer lives behind `./sandbox/*` subpaths.
+- `examples/*` — one private package per example, never published. They are type-checked with
+  everything else, so an example that stops compiling against the core API fails CI.
 
 **Tests live outside `src`.** Each package keeps its sources in `src/` and its tests in a
 sibling `test/` directory — never colocated, never in a nested `__tests__/`. ESLint rejects a
