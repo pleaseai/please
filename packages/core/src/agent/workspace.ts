@@ -13,6 +13,9 @@
  * run does. A `Record` of path to content is what a Worker gets, where there is no filesystem
  * to read and the directory has to be inlined into the bundle ahead of time.
  */
+// Type-only, so it is erased at build and pulls no `node:fs` into a Worker bundle — the same
+// reason every value import in this file is dynamic.
+import type { Stats } from 'node:fs'
 
 /** Session-relative POSIX paths to their contents. The shape a Worker can carry. */
 export type WorkspaceFiles = Readonly<Record<string, string>>
@@ -119,10 +122,42 @@ async function gitCandidates(root: string): Promise<string[] | undefined> {
     )
     return stdout.split('\0').filter(entry => entry !== '')
   }
-  catch {
-    // Not a repository, git not installed, git refusing the directory as unsafe — every one of
-    // them means the same thing here: there are no user rules to honour, so fall back.
+  catch (cause) {
+    // An output limit is the one failure that must not fall back. `walkCandidates` honours no
+    // `.gitignore`, so a repository whose file list is merely too long would silently start
+    // carrying the very `node_modules` this function exists to leave behind — the failure this
+    // whole path was built to prevent, reached through its own guard.
+    if ((cause as { code?: string } | undefined)?.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+      throw new RangeError(
+        `'${root}' lists more than ${MAX_WORKSPACE_TOTAL_BYTES} bytes of file names; `
+        + 'narrow the workspace rather than letting it fall back to an unfiltered walk',
+      )
+    }
+    // Everything else — not a repository, git not installed, git refusing the directory as
+    // unsafe — means the same thing here: there are no user rules to honour, so fall back.
     return undefined
+  }
+}
+
+/**
+ * Stat a candidate, treating only a vanished entry as nothing to read.
+ *
+ * A tracked file git lists but the working tree no longer holds, or a directory entry such as a
+ * submodule gitlink, is not a file and not worth reporting. Any other failure — a permission
+ * denial above all — is a file the caller meant to carry and cannot, so it is raised rather than
+ * dropped into the silence this module exists to remove.
+ */
+async function statCandidate(absolute: string): Promise<Stats | undefined> {
+  const { stat } = await import('node:fs/promises')
+  try {
+    return await stat(absolute)
+  }
+  catch (cause) {
+    const code = (cause as { code?: string } | undefined)?.code
+    if (code === 'ENOENT' || code === 'ENOTDIR') {
+      return undefined
+    }
+    throw cause
   }
 }
 
@@ -147,7 +182,7 @@ async function walkCandidates(root: string): Promise<string[]> {
  * over the line is a mistake about which directory was handed over, and stopping says so.
  */
 async function readCandidates(root: string, candidates: readonly string[]): Promise<Workspace> {
-  const [{ readFile, stat }, { join }] = await Promise.all([
+  const [{ readFile }, { join }] = await Promise.all([
     import('node:fs/promises'),
     import('node:path'),
   ])
@@ -160,9 +195,7 @@ async function readCandidates(root: string, candidates: readonly string[]): Prom
     // `join` rather than a template, so a root that already ends in a separator does not
     // produce a doubled one — and a filesystem root, which has nothing to strip, still reads.
     const absolute = join(root, entry)
-    // A tracked file git lists but the working tree no longer holds, or a directory entry such
-    // as a submodule gitlink: neither is a file to read, and neither is worth reporting.
-    const stats = await stat(absolute).catch(() => undefined)
+    const stats = await statCandidate(absolute)
     if (stats === undefined || !stats.isFile()) {
       continue
     }

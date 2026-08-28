@@ -1,7 +1,7 @@
 import type { WorkspaceWriter } from '../../src/agent/workspace'
 import { Buffer } from 'node:buffer'
 import { execFile } from 'node:child_process'
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -139,6 +139,58 @@ describe('readWorkspace', () => {
     // Silence would be the worse answer here: a seed this size is a mistake about which
     // directory was handed over, so the error says what it exceeded.
     await expect(readWorkspace(root)).rejects.toThrow(String(MAX_WORKSPACE_TOTAL_BYTES))
+  })
+
+  it('refuses a repository whose file list overruns the buffer rather than walking it', async () => {
+    const root = await gitFixture()
+    // A `git` that outpaces `maxBuffer`, which is what a repository with an enormous file list
+    // does. Falling back on that error would drop the ignore rules and start carrying the very
+    // trees this path exists to leave behind — the failure reached through its own guard.
+    const shim = await mkdtemp(join(tmpdir(), 'please-git-shim-'))
+    await writeFile(join(shim, 'git'), '#!/bin/sh\nhead -c 70000000 /dev/zero\n', { mode: 0o755 })
+    const path = process.env.PATH
+
+    process.env.PATH = `${shim}:${path ?? ''}`
+    try {
+      await expect(readWorkspace(root)).rejects.toThrow(String(MAX_WORKSPACE_TOTAL_BYTES))
+    }
+    finally {
+      process.env.PATH = path
+      await rm(shim, { recursive: true, force: true })
+    }
+  })
+
+  it('skips a tracked file the working tree no longer holds', async () => {
+    const root = await gitFixture()
+    // `git ls-files` reads the index, so a file deleted after `git add` is still listed. It is
+    // not there to read and it is not a file the caller lost — nothing to report.
+    await rm(join(root, 'CLAUDE.md'))
+
+    const { files, skipped } = await readWorkspace(root)
+
+    expect(Object.keys(files)).not.toContain('CLAUDE.md')
+    expect(skipped).toEqual([])
+  })
+
+  it('raises when a listed file cannot be stat-ed for a reason other than absence', async () => {
+    // Root ignores the directory mode, so there is nothing to deny and nothing to observe.
+    if (process.getuid?.() === 0) {
+      return
+    }
+    const root = await gitFixture()
+    await mkdir(join(root, 'locked'), { recursive: true })
+    await writeFile(join(root, 'locked', 'secret.md'), '# secret\n')
+    await promisify(execFile)('git', ['add', 'locked/secret.md'], { cwd: root })
+    await chmod(join(root, 'locked'), 0o000)
+
+    try {
+      // The file exists and was asked for; the seed simply cannot read it. Dropping it would
+      // hand over a workspace missing a file with nothing to say so.
+      await expect(readWorkspace(root)).rejects.toThrow(/EACCES|permission denied/i)
+    }
+    finally {
+      await chmod(join(root, 'locked'), 0o700)
+    }
   })
 })
 
