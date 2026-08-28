@@ -1,0 +1,20 @@
+packages/core/test/sandbox/microsandbox/backend.test.ts
+  s_82e04306492abb::t_b51ff59ebbfb14 48-65,73-74,83,89-91
+  s_82e04306492abb::t_8fae431d44b545 47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "0b58d9dc2ff23e4d4e91e8c442b5e62a006648df",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
