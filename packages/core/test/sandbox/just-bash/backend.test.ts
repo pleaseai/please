@@ -388,6 +388,37 @@ describe('just-bash sandbox backend', () => {
     expect(exit.timedOut).toBe(false)
   })
 
+  it('ends an aborted log read at the abort, not at the command it gave up on', async () => {
+    const { sandboxes, sandboxId } = freshSandbox()
+    const session = sandboxes.session(sandboxId)
+
+    const proc = await session.exec(['sh', '-c', 'sleep 3 ; echo late'])
+    const controller = new AbortController()
+    const startedAt = Date.now()
+    // `logs()` drains the vendor's own `logs()`, which does not yield until the command ends.
+    // Checking the signal after that would make an aborted read return when the command it was
+    // abandoned for finished, which for a long turn is the whole wait the caller aborted.
+    const pending = proc.logs({ signal: controller.signal })
+    controller.abort()
+    const logs = await drain(await pending)
+
+    expect(logs.stdout).toBe('')
+    expect(Date.now() - startedAt).toBeLessThan(2_000)
+    await proc.waitForExit()
+  }, 20_000)
+
+  it('returns a closed stream for a read that was already abandoned', async () => {
+    const { sandboxes, sandboxId } = freshSandbox()
+    const session = sandboxes.session(sandboxId)
+
+    const proc = await session.exec(['sh', '-c', 'echo present'])
+    await proc.waitForExit()
+    const logs = await drain(await proc.logs({ replay: true, signal: AbortSignal.abort() }))
+
+    expect(logs.stdout).toBe('')
+    expect(logs.terminal).toBeUndefined()
+  })
+
   it('refuses to invent a port endpoint it cannot back', async () => {
     const { sandboxes, sandboxId } = freshSandbox()
 

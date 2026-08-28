@@ -142,14 +142,14 @@ export function createMicrosandboxSandbox(
     return {
       ...created,
       destroy: async () => {
-        try {
-          await created.destroy()
+        // Evicted before the teardown is awaited, not in a `finally` after it. Awaiting first
+        // leaves a window in which a new `session(id)` finds this handle still registered and
+        // adopts it — and the identity check would then still pass, so this call would evict the
+        // new session's handle on its way out. `../just-bash/provider.ts` says the same.
+        if (handles.get(sandboxId) === handle) {
+          handles.delete(sandboxId)
         }
-        finally {
-          if (handles.get(sandboxId) === handle) {
-            handles.delete(sandboxId)
-          }
-        }
+        await created.destroy()
       },
     }
   }

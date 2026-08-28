@@ -496,6 +496,11 @@ suite('local sandbox backend', () => {
     await proc.kill(9)
 
     await expect(proc.waitForExit()).rejects.toBeInstanceOf(SandboxNoExitRecordError)
+    // A log stream closes on the same fact rather than hanging or reporting a synthetic exit:
+    // the terminal event says `error`, which is what a reader has to act on.
+    const logs = await drain(await proc.logs({ replay: true }))
+    expect(logs.terminal?.type).toBe('terminal')
+    expect(logs.terminal?.type === 'terminal' ? logs.terminal.state : undefined).toBe('error')
   })
 
   it('destroys the sandbox directory and nothing outside it', async () => {
@@ -580,6 +585,20 @@ suite('local sandbox backend', () => {
     expect(await session.getProcess(orphanId)).toBeNull()
     expect((await session.listProcesses()).map(entry => entry.id)).not.toContain(orphanId)
   })
+
+  it('escalates to SIGKILL for a command that ignores the timeout\'s SIGTERM', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    // The watchdog signals the group; the command ignores it, so the wrapper's own handler
+    // starts the escalation, which writes the exit record *before* killing the group it belongs
+    // to. `waitForExit` must not return on that record until the group is actually gone.
+    const proc = await session.exec(['sh', '-c', 'trap "" TERM ; sleep 30'], { timeout: 500 })
+    const exit = await proc.waitForExit()
+
+    expect(exit.timedOut).toBe(true)
+    expect(exit.signal).toBe(constants.signals.SIGKILL)
+    expect((await proc.status()).state).toBe('exited')
+  }, 30_000)
 
   it('resolves no process for an id that is not one this backend could have minted', async () => {
     const session = sandboxes.session(sandboxId)
