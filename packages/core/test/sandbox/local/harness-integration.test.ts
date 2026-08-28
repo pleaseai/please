@@ -43,7 +43,7 @@ suite('local backend through the harness provider', () => {
   })
 
   it('names the backend it was built over', () => {
-    expect(provider.providerId).toBe('pleaseai-local')
+    expect(provider.providerId).toBe('pleasedev-local')
     expect(provider.specificationVersion).toBe('harness-sandbox-v1')
   })
 

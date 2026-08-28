@@ -13,7 +13,7 @@
  * **The types below are structural copies, not imports of the vendor's.** Same rule, and same
  * reason, as `../contract/types.ts` and `../just-bash/runtime.ts`: an `import type` from
  * `microsandbox` would put the package into this subpath's generated `.d.ts`, so a consumer who
- * never installed the optional peer would fail to type-check against `@pleaseai/core`. Only the
+ * never installed the optional peer would fail to type-check against `@pleasedev/core`. Only the
  * surface actually used is copied, and `./vendor-shape.ts` is the test that it still matches.
  */
 
@@ -159,7 +159,7 @@ export class MicrosandboxUnavailableError extends Error {
   constructor(cause: unknown) {
     super(
       'the `microsandbox` package could not be loaded. It is an optional peer dependency of '
-      + '@pleaseai/core — run `bun add microsandbox` to use @pleaseai/core/sandbox/microsandbox, '
+      + '@pleasedev/core — run `bun add microsandbox` to use @pleasedev/core/sandbox/microsandbox, '
       + 'and note that it ships no native addon for every platform (there is none for '
       + 'darwin-x64). See the `cause` for which of the two applies.',
     )

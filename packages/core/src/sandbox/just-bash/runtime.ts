@@ -10,7 +10,7 @@
  * **The types below are structural copies, not imports of the vendor's.** That is the rule
  * `../contract/types.ts` states about itself and the reason is the same one: an `import type`
  * from `just-bash` would put the package in this subpath's generated `.d.ts`, so a consumer who
- * never installed the optional peer would fail to type-check against `@pleaseai/core`. Only the
+ * never installed the optional peer would fail to type-check against `@pleasedev/core`. Only the
  * surface actually used is copied.
  */
 
@@ -77,7 +77,7 @@ export class JustBashUnavailableError extends Error {
   constructor(cause: unknown) {
     super(
       'the `just-bash` package is not installed. It is an optional peer dependency of '
-      + '@pleaseai/core — run `bun add just-bash` to use @pleaseai/core/sandbox/just-bash.',
+      + '@pleasedev/core — run `bun add just-bash` to use @pleasedev/core/sandbox/just-bash.',
     )
     this.name = 'JustBashUnavailableError'
     this.cause = cause

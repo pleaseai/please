@@ -1,9 +1,9 @@
 /**
- * `@pleaseai/core/sandbox/microsandbox` — a microVM backend for the sandbox contract.
+ * `@pleasedev/core/sandbox/microsandbox` — a microVM backend for the sandbox contract.
  *
  * **Host-only.** Everything here drives a hypervisor through a native addon, so this subpath must
  * never be reached from a Cloudflare Worker bundle. It is a separate entry point for exactly that
- * reason: importing `@pleaseai/core` or `@pleaseai/core/sandbox` pulls none of it in.
+ * reason: importing `@pleasedev/core` or `@pleasedev/core/sandbox` pulls none of it in.
  *
  * `microsandbox` is an **optional peer dependency**: install it to use this subpath. It is
  * imported dynamically, so its absence — or the absence of a native addon for the current

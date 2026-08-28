@@ -1,5 +1,5 @@
 /**
- * `@pleaseai/core` — the core package of the `please` agent framework.
+ * `@pleasedev/core` — the core package of the `please` agent framework.
  *
  * The framework's public surface has not been designed yet. Nothing here is a
  * placeholder for a decided API: this module exists so that the workspace,

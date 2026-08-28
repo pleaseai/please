@@ -1,10 +1,10 @@
 /**
- * `@pleaseai/core/sandbox/just-bash` — a virtual-shell backend for the sandbox contract.
+ * `@pleasedev/core/sandbox/just-bash` — a virtual-shell backend for the sandbox contract.
  *
  * **Needs no daemon, no image and no host process**, because it runs no host process: `just-bash`
  * interprets the commands over an in-memory filesystem. It is the only one of the three backends
  * that could run inside a Worker bundle in principle — but it is still a separate entry point,
- * so importing `@pleaseai/core` or `@pleaseai/core/sandbox` pulls none of it in.
+ * so importing `@pleasedev/core` or `@pleasedev/core/sandbox` pulls none of it in.
  *
  * `just-bash` is an **optional peer dependency**: install it to use this subpath. It is imported
  * dynamically, so its absence is an actionable error rather than a resolution failure — see

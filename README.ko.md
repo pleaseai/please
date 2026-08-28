@@ -70,7 +70,7 @@
 
 ## 상태
 
-**프레임워크 API는 아직 설계되지 않았다.** `@pleaseai/core`의 루트 export는 일부러 비어 있다. 우연히
+**프레임워크 API는 아직 설계되지 않았다.** `@pleasedev/core`의 루트 export는 일부러 비어 있다. 우연히
 생긴 표면이 확정된 것처럼 인용되는 일을 막기 위해서다.
 
 한 계층만 존재한다. 열린 질문들을 그것 없이는 답할 수 없었기 때문이다 — **샌드박스**다. 루트가 아니라
@@ -78,12 +78,12 @@
 
 | 서브패스 | 무엇인가 |
 | --- | --- |
-| `@pleaseai/core/sandbox` | 백엔드 계약 — 벤더 중립 타입 |
-| `@pleaseai/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
-| `@pleaseai/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
-| `@pleaseai/core/sandbox/local` | 호스트 프로세스 백엔드 — 데몬도 이미지도, **격리도 없다**. 같은 이유로 호스트 전용 |
-| `@pleaseai/core/sandbox/just-bash` | [`just-bash`](https://www.npmjs.com/package/just-bash) 위의 가상 셸 백엔드 — 데몬도 이미지도 호스트 프로세스도 없고, **실제 바이너리도 없다**. `just-bash` 는 선택적 peer 의존성 |
-| `@pleaseai/core/sandbox/microsandbox` | [`microsandbox`](https://www.npmjs.com/package/microsandbox) 위의 microVM 백엔드 — 네임스페이스가 아니라 하이퍼바이저로 격리한다. 선택적 peer 의존성이며, **타입 검사만 되었고 아직 실행되지 않았다** (아래 참조) |
+| `@pleasedev/core/sandbox` | 백엔드 계약 — 벤더 중립 타입 |
+| `@pleasedev/core/sandbox/harness` | 그 계약을 AI SDK `HarnessV1SandboxProvider`로 옮긴 것. 모든 백엔드를 위해 한 번만 작성한다 |
+| `@pleasedev/core/sandbox/docker` | 로컬 Docker 백엔드. **호스트 전용** — `docker` CLI를 실행하므로 Worker 번들에 들어가면 안 된다 |
+| `@pleasedev/core/sandbox/local` | 호스트 프로세스 백엔드 — 데몬도 이미지도, **격리도 없다**. 같은 이유로 호스트 전용 |
+| `@pleasedev/core/sandbox/just-bash` | [`just-bash`](https://www.npmjs.com/package/just-bash) 위의 가상 셸 백엔드 — 데몬도 이미지도 호스트 프로세스도 없고, **실제 바이너리도 없다**. `just-bash` 는 선택적 peer 의존성 |
+| `@pleasedev/core/sandbox/microsandbox` | [`microsandbox`](https://www.npmjs.com/package/microsandbox) 위의 microVM 백엔드 — 네임스페이스가 아니라 하이퍼바이저로 격리한다. 선택적 peer 의존성이며, **타입 검사만 되었고 아직 실행되지 않았다** (아래 참조) |
 
 하네스 변환을 백엔드에서 떼어 둔 덕분에 두 번째 백엔드가 그것을 다시 만들 필요가 없고, 서브패스는
 호스트 전용 코드가 그것을 실행할 수 없는 타깃으로 새어 들어가지 않게 막는다.
@@ -132,7 +132,7 @@ mise run ci         # lint + type-check + test + build
 
 ```
 packages/
-  core/                      # @pleaseai/core — 루트 export는 일부러 비어 있다
+  core/                      # @pleasedev/core — 루트 export는 일부러 비어 있다
     src/sandbox/
       contract/              # 백엔드 계약
       harness/               # 그 계약 위의 HarnessV1SandboxProvider

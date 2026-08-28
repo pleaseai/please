@@ -1,11 +1,11 @@
 # Project layout
 
 > **Status: proposal, not a decision.** No layout below is implemented, no signature is settled, and
-> `@pleaseai/core`'s root export is still empty. This note exists so the layout argument can be had
+> `@pleasedev/core`'s root export is still empty. This note exists so the layout argument can be had
 > against something concrete. Treat every directory below as a candidate.
 >
 > Open questions 1 and 2 are the exception: both have been **answered by measurement**, and the
-> sandbox layer written to answer them is real code (`@pleaseai/core/sandbox`). Everything those
+> sandbox layer written to answer them is real code (`@pleasedev/core/sandbox`). Everything those
 > answers changed is marked below.
 
 The facts this argument rests on are recorded with sources and dates in
@@ -189,23 +189,23 @@ A constraint fell out of the same run, and it is a sandbox obligation rather tha
 bypass route **cannot start as root**. The CLI's gate is
 `getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and the first run died on it
 because `node:22-bookworm` runs as root. A container backend therefore either runs the harness as a
-non-root user or declares `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` now declares it for
+non-root user or declares `IS_SANDBOX=1`, and `@pleasedev/core/sandbox/docker` now declares it for
 every container it creates — `containerEnv`, which the caller's own `env` can override. A container
 *is* a deliberate sandbox, so the claim is true rather than a way around the check, and the probe
 no longer sets it: the run is now also the check that the backend does.
 
-The same constraint read from the other side is why `@pleaseai/core/sandbox/local` — a host-process
+The same constraint read from the other side is why `@pleasedev/core/sandbox/local` — a host-process
 backend added since, for the cases where no daemon is reachable — deliberately does **not** declare
 it. There the claim would be false, and the root check it defeats is the last thing standing between
 a bypassed permission prompt and the developer's own home directory. Isolation is what makes the
 declaration honest, so only the backend that provides isolation makes it.
 
-`@pleaseai/core/sandbox/microsandbox` reads the constraint the same way the Docker backend does and
+`@pleasedev/core/sandbox/microsandbox` reads the constraint the same way the Docker backend does and
 declares `IS_SANDBOX=1` for the same reason, with more room to spare: a microVM is a separate
 kernel, so the claim is true by a wider margin than a container's. The caller still wins by passing
 `IS_SANDBOX` in `env`.
 
-`@pleaseai/core/sandbox/just-bash` — a virtual-shell backend added since, over an interpreter with
+`@pleasedev/core/sandbox/just-bash` — a virtual-shell backend added since, over an interpreter with
 its own in-memory filesystem — sits outside this question rather than on either side of it. Its
 isolation is real, but there is no `getuid()` to gate and no `node` to run: its commands are
 interpreted, so the adapter's CLI cannot be launched inside it at all. It is a backend for the parts
