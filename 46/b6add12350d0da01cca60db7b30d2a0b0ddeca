@@ -1,0 +1,51 @@
+examples/claude-code-docker/index.ts
+  s_bdd4816c96dae9::t_438d14490408ad 1-38,50-53,55-57,62-72
+  s_bdd4816c96dae9::t_beb6c09fd66904 39,41,48
+  s_bdd4816c96dae9::t_c1d303cae89ca8 40,42-47,54,58-61
+  s_bdd4816c96dae9::t_bf30ad131fd8ee 49
+examples/claude-code-docker/package.json
+  s_bdd4816c96dae9::t_c62e79a6736515 1-15
+package.json
+  s_bdd4816c96dae9::t_2819d5e05e90dc 6
+  s_bdd4816c96dae9::t_c62e79a6736515 7
+examples/claude-code-docker/README.md
+  s_bdd4816c96dae9::t_c3b02ef9b1ead1 41-43,55-70,84-86,97
+  s_bdd4816c96dae9::t_1d86c6f1fd6637 1-40,44-54,71-83,87-96,98-99
+eslint.config.ts
+  s_bdd4816c96dae9::t_438d14490408ad 4-8
+examples/claude-code-docker/tsconfig.json
+  s_bdd4816c96dae9::t_c8b3ea2ebcd836 1-6
+examples/claude-code-docker/src/workspace/.claude/agents/verifier.md
+  s_bdd4816c96dae9::t_beb6c09fd66904 1-12
+examples/claude-code-docker/src/workspace/CLAUDE.md
+  s_bdd4816c96dae9::t_c44d8c47c100c8 1-9
+examples/claude-code-docker/src/sandbox.ts
+  s_bdd4816c96dae9::t_438d14490408ad 1-25
+examples/claude-code-docker/src/workspace/sum.js
+  s_bdd4816c96dae9::t_c44d8c47c100c8 1-7
+examples/claude-code-docker/src/agent.ts
+  s_bdd4816c96dae9::t_c8b3ea2ebcd836 11
+  s_bdd4816c96dae9::t_c44d8c47c100c8 1,3,8-10
+  s_bdd4816c96dae9::t_438d14490408ad 2,4-7,12-35
+examples/README.md
+  s_bdd4816c96dae9::t_2819d5e05e90dc 1-2,5-7,9,13-15
+  s_bdd4816c96dae9::t_1d86c6f1fd6637 3-4,8,10-12,16-23
+bun.lock
+  s_bdd4816c96dae9::t_360a4effc0e397 20-27,216-217
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "46b6add12350d0da01cca60db7b30d2a0b0ddeca",
+  "prompts": {},
+  "sessions": {
+    "s_bdd4816c96dae9": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "480fa548-44a4-4990-a933-a623efb8da4c",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
