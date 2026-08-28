@@ -1,0 +1,22 @@
+packages/core/test/sandbox/microsandbox/fake-runtime.ts
+  s_82e04306492abb::t_2a48c712de3465 182-202,279-280
+  s_82e04306492abb::t_66038a6b8ce084 181
+packages/core/src/sandbox/microsandbox/provider.ts
+  s_82e04306492abb::t_2a48c712de3465 91-126,131,153-156,191-202
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "5aa4ad90103da6bc32cc757cb26c9c01b1ab24ec",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
