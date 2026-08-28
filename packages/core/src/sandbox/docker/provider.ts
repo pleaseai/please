@@ -26,6 +26,25 @@ export interface DockerSandboxOptions extends ContainerOptions {
  */
 export const DEFAULT_IMAGE = 'node:22-bookworm'
 
+/**
+ * What every container declares about itself, before the caller's own environment.
+ *
+ * `IS_SANDBOX=1` is the Claude Code CLI's own way of being told it is running inside a
+ * deliberate sandbox, and for this backend the claim is simply true. It is not a convenience:
+ * the adapter's *default* permission mode — `allow-all` with every built-in tool active —
+ * reaches the Agent SDK as `bypassPermissions`, and the CLI refuses that outright when it is
+ * root. Its gate is `getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and
+ * {@link DEFAULT_IMAGE} runs as root, so without this the adapter cannot start a turn here at
+ * all — it dies with `--dangerously-skip-permissions cannot be used with root/sudo
+ * privileges`. Measured by `scripts/probe-permissions.ts`.
+ *
+ * The caller wins. Passing `IS_SANDBOX` in `env` overrides it, because a caller that sets a
+ * non-root `user` does not need it and should be able to say so.
+ */
+export function containerEnv(env: ContainerOptions['env']): Record<string, string> {
+  return { IS_SANDBOX: '1', ...env }
+}
+
 export function createDockerSandbox(options: DockerSandboxOptions): SandboxProvider {
   const handles = new Map<string, ReturnType<typeof createContainerHandle>>()
 
@@ -38,6 +57,7 @@ export function createDockerSandbox(options: DockerSandboxOptions): SandboxProvi
     }
     const created = createContainerHandle(sandboxId, {
       ...options,
+      env: containerEnv(options.env),
       ...(options.namePrefix === undefined ? {} : { prefix: options.namePrefix }),
     })
     handles.set(sandboxId, created)

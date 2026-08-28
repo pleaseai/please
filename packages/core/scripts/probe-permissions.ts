@@ -150,19 +150,16 @@ function buildAgent(input: {
     harness: createClaudeCode({
       auth: 'auto',
       model: process.env.PROBE_MODEL ?? 'claude-sonnet-5',
-      env: {
-        // Same pin as probe-claude-dir.ts: this host's ANTHROPIC_BASE_URL points at an org
-        // gateway that the credential reaching the sandbox may not be minted for.
-        ANTHROPIC_BASE_URL: process.env.PROBE_BASE_URL ?? 'https://api.anthropic.com',
-        // Without this the bypass case cannot start at all, which the first run of this probe
-        // measured: `node:22-bookworm` runs as root, and the CLI refuses outright —
-        // `--dangerously-skip-permissions cannot be used with root/sudo privileges for
-        // security reasons`. Its gate is exactly `getuid() === 0 && IS_SANDBOX !== '1' &&
-        // !CLAUDE_CODE_BUBBLEWRAP`, read from the shipped binary, and it guards only the root
-        // check — no permission rule is evaluated there. Set on **both** cases even though
-        // only one can trip it, so the two runs still differ in one thing and not two.
-        IS_SANDBOX: '1',
-      },
+      // Same pin as probe-claude-dir.ts: this host's ANTHROPIC_BASE_URL points at an org
+      // gateway that the credential reaching the sandbox may not be minted for.
+      //
+      // `IS_SANDBOX` is deliberately *not* here. The first run of this probe died before any
+      // permission could be read — `node:22-bookworm` runs as root and the CLI refuses the
+      // bypass mode outright with `--dangerously-skip-permissions cannot be used with
+      // root/sudo privileges for security reasons` — and the fix belongs to the backend, not
+      // to a script: `createDockerSandbox` now declares `IS_SANDBOX=1` for every container it
+      // creates (`containerEnv`). So this probe also stands as the check that it does.
+      env: { ANTHROPIC_BASE_URL: process.env.PROBE_BASE_URL ?? 'https://api.anthropic.com' },
     }),
     sandbox: createHarnessSandboxProvider({
       sandboxes: input.sandboxes,

@@ -266,6 +266,18 @@ suite('docker sandbox backend', () => {
     expect(logs.stdout).toContain('passed-through')
   })
 
+  it('declares IS_SANDBOX to every process it runs', async () => {
+    const session = sandboxes.session(sandboxId)
+
+    // The Claude Code CLI refuses its bypass permission mode as root unless this is set, and
+    // the sandbox image runs as root, so the backend claims it at container creation.
+    const proc = await session.exec(['sh', '-c', 'echo "$IS_SANDBOX"'])
+    await proc.waitForExit()
+    const logs = await drain(await proc.logs({ replay: true }))
+
+    expect(logs.stdout.trim()).toBe('1')
+  })
+
   it('quotes argv so a shell cannot reinterpret it', async () => {
     const session = sandboxes.session(sandboxId)
     const hostile = 'x\'y $(echo pwned) `echo pwned` *'

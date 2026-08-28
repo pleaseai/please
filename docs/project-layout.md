@@ -182,9 +182,11 @@ it did not write can contradict it.
 A constraint fell out of the same run, and it is a sandbox obligation rather than a layout one: the
 bypass route **cannot start as root**. The CLI's gate is
 `getuid() === 0 && IS_SANDBOX !== '1' && !CLAUDE_CODE_BUBBLEWRAP`, and the first run died on it
-because `node:22-bookworm` runs as root — so a container backend either runs the harness as a
-non-root user or sets `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` currently does neither on
-its own.
+because `node:22-bookworm` runs as root. A container backend therefore either runs the harness as a
+non-root user or declares `IS_SANDBOX=1`, and `@pleaseai/core/sandbox/docker` now declares it for
+every container it creates — `containerEnv`, which the caller's own `env` can override. A container
+*is* a deliberate sandbox, so the claim is true rather than a way around the check, and the probe
+no longer sets it: the run is now also the check that the backend does.
 
 **3. How does `host-tools/` behave across both targets?** A Worker has a per-invocation CPU limit; a
 Node deployment has a real filesystem and owns its own restart reconciliation. The README says this
