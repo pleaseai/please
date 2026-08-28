@@ -1,0 +1,35 @@
+packages/core/test/sandbox/microsandbox/fake-runtime.ts
+  s_82e04306492abb::t_eb3133ffd601ad 1-237,250-331
+  s_82e04306492abb::t_a1092088555aec 238-249
+packages/core/test/sandbox/microsandbox/session-over-fake.test.ts
+  s_82e04306492abb::t_44e087b8130df9 1-28,30-260,265,267,271-311
+  s_82e04306492abb::t_8e490480a6ad8b 261-264,266
+  s_82e04306492abb::t_96e446999c90c8 268-269
+  s_82e04306492abb::t_e1dd772a1ca168 270
+  s_82e04306492abb::t_0dd5e6945c6fea 29
+packages/core/test/sandbox/just-bash/backend.test.ts
+  s_82e04306492abb::t_a761cabe3f2ab0 392,411
+  s_82e04306492abb::t_27e0d33cf8f153 391,393-410,412-421
+packages/core/src/sandbox/microsandbox/provider.ts
+  s_82e04306492abb::t_f5c2d5f2fbd784 145-150,152
+packages/core/test/sandbox/local/backend.test.ts
+  s_82e04306492abb::t_27e0d33cf8f153 589-602
+  s_82e04306492abb::t_96e446999c90c8 499-502
+  s_82e04306492abb::t_e1dd772a1ca168 503
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "33bc6f63948766be3423cbefdc407cd54cd6c2bd",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
