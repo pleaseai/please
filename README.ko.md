@@ -137,11 +137,14 @@ packages/
         harness/             # 그 계약 위의 HarnessV1SandboxProvider
         docker/              # 로컬 Docker 백엔드 (호스트 전용)
     scripts/                 # 런타임을 가정하지 않고 측정하는 프로브
+  cli/                       # @pleasedev/cli — 아직 배포하지 않는다. 명령어가 없다
+    src/ui/                  # 세션이 시작되기 전에 `please dev`가 그리는 부팅 크롬
 examples/
   claude-code-docker/        # 로컬 컨테이너 안의 Claude Code. 위 API로 작성됐다
 docs/
   prior-art.md               # eve, flue, AI SDK 하네스, Agent SDK가 이미 하고 있는 것
   project-layout.md          # 레이아웃 논증, 정해진 것, 아직 열린 것
+  dev-tui.md                 # `please dev`: 정해진 것과, 아직 기다리는 것
 ```
 
 예제는 실행할 수 있고, 이 프레임워크가 무엇을 하고 무엇을 하지 않는지 보는 가장 짧은 길이다.
@@ -167,6 +170,10 @@ bun run packages/core/scripts/probe-permissions.ts        # Anthropic 자격 증
 
 [`docs/project-layout.md`](docs/project-layout.md)은 그 기록 위에 세운 논증이다. 계약이 이미 우리 대신
 정해 버린 것들, 선언 문법이 디렉티브가 아니라 함수인 이유, 그리고 아직 열려 있는 질문들.
+
+[`docs/dev-tui.md`](docs/dev-tui.md)은 그 위에 얹힌 논증이다. 대화형 `please dev`가 터미널을
+[`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui)와 eve에서 이식한 부팅 크롬
+사이에 어떻게 나누는지, 그리고 그 명령어가 아직 어떤 `defineAgent` 결정을 기다리고 있는지.
 
 ## 기여
 

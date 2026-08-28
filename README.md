@@ -147,11 +147,14 @@ packages/
         harness/             # HarnessV1SandboxProvider over that contract
         docker/              # local Docker backend (host-only)
     scripts/                 # probes that measure the runtime rather than assume it
+  cli/                       # @pleasedev/cli — unreleased; has no command yet
+    src/ui/                  # the boot chrome `please dev` draws before the session starts
 examples/
   claude-code-docker/        # Claude Code in a local container, built on the API above
 docs/
   prior-art.md               # what eve, flue, the AI SDK harnesses and the Agent SDK already do
   project-layout.md          # the layout argument, what is settled, and what is still open
+  dev-tui.md                 # `please dev`: what is decided, and what it waits on
 ```
 
 The example is runnable, and is the shortest way to see what the framework does and does not do:
@@ -178,6 +181,11 @@ from what exists rather than from recollection.
 [`docs/project-layout.md`](docs/project-layout.md) is the argument built on that record: what the
 contract already decides for us, why the declaration syntax is a function rather than a directive,
 and the questions still open.
+
+[`docs/dev-tui.md`](docs/dev-tui.md) is the one built on top of that: how an interactive
+`please dev` divides the terminal between
+[`@ai-sdk/tui`](https://ai-sdk.dev/docs/ai-sdk-harnesses/terminal-ui) and a boot chrome ported from
+eve, and which `defineAgent` decisions the command is still waiting on.
 
 ## Contributing
 
