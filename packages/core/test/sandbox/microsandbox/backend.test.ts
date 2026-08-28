@@ -8,10 +8,19 @@
  * whether a sandbox is adoptable by name from a second host process, whether a process survives
  * being read after it exits — is only answerable against the runtime.
  *
- * **The whole file skips where `microsandbox` cannot load**, which includes the host this backend
- * was written on: the package ships no native addon for `darwin-x64`. That is not a workaround —
- * it is the same gate `../docker/backend.test.ts` uses for an unreachable daemon, and the reason
- * `isMicrosandboxAvailable()` exists. `./vendor-shape.test.ts` is what still runs everywhere.
+ * **The whole file skips where a microVM cannot be booted**, which includes the host this backend
+ * was written on and the CI runner it is tested on, for two different reasons. That is not a
+ * workaround — it is the same gate `../docker/backend.test.ts` uses for an unreachable daemon.
+ * `./vendor-shape.test.ts` is what still runs everywhere.
+ *
+ * The gate is a boot, not a load. `isMicrosandboxAvailable()` answers whether the runtime can be
+ * imported, and on `darwin-x64` — where the package ships no native addon — that is already the
+ * whole answer. It is not the whole answer on Linux: measured on a GitHub-hosted runner, the
+ * addon loads and the guest then dies with `SIGABRT` before its agent relay comes up, because a
+ * microVM needs a hypervisor the runner does not provide. Gating on the import alone turned that
+ * into a red suite on every push. So the gate boots one throwaway sandbox and asks the host
+ * directly, which costs one extra boot where the answer is yes and is the only form of the
+ * question that does not have to guess at what the runtime needs underneath it.
  *
  * A skip here is genuinely a skip: nothing below has been observed to pass. The type-level claims
  * are checked by `tsc` and by the shape suite; the behavioural ones wait for a host that can boot
@@ -31,12 +40,40 @@ import {
   MicrosandboxPortNotMappedError,
 } from '../../../src/sandbox/microsandbox'
 
-const available = await isMicrosandboxAvailable()
-const suite = available ? describe : describe.skip
-
 const WORK_DIR = '/work'
 /** A cold image pull plus a kernel boot outlasts bun's per-test budget by a wide margin. */
 const BOOT_TIMEOUT_MS = 300_000
+
+/**
+ * Whether this host can boot a microVM, asked by booting one.
+ *
+ * The import check comes first because it is free and is the whole answer on a platform with no
+ * native addon. Past it, nothing short of a boot distinguishes a host that can run a guest from
+ * one that only has the library to try.
+ *
+ * Any failure is a `false` rather than a throw: the question is whether the suite can run, and a
+ * host that cannot answer it is a host that cannot run the suite.
+ */
+async function canBootMicroVm(): Promise<boolean> {
+  if (!await isMicrosandboxAvailable()) {
+    return false
+  }
+  const probe = createMicrosandboxSandbox({ image: DEFAULT_IMAGE, workDir: WORK_DIR })
+  const session = probe.session(`boot-probe-${crypto.randomUUID().slice(0, 8)}`)
+  try {
+    await session.exists(WORK_DIR)
+    return true
+  }
+  catch {
+    return false
+  }
+  finally {
+    await session.destroy().catch(() => undefined)
+  }
+}
+
+const available = await canBootMicroVm()
+const suite = available ? describe : describe.skip
 
 /** Collect a log stream into per-stream text. */
 async function drain(events: ReadableStream<ProcessLogEvent>) {

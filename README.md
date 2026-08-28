@@ -99,8 +99,10 @@ it, and the subpaths are what keep host-only code out of a target that cannot ru
 Three of the four backends are covered by suites that run wherever their prerequisite is present —
 `local` and `just-bash` everywhere, `docker` where a daemon is reachable. The **microsandbox**
 backend is the exception and says so rather than implying otherwise: `microsandbox` ships no native
-addon for `darwin-x64`, which is the platform it was written on, so its behavioural suite has never
-been observed to pass. What *is* checked everywhere is that its structural copies of the vendor's
+addon for `darwin-x64`, which is the platform it was written on, and on the Linux CI runner the
+addon loads but the guest dies before its agent relay comes up, for want of a hypervisor. So its
+behavioural suite has never been observed to pass, and its gate is a throwaway boot rather than an
+import check, so that neither host reports a green suite it never ran. What *is* checked everywhere is that its structural copies of the vendor's
 types still match the vendor's own declarations — `test/sandbox/microsandbox/vendor-shape.test.ts`,
 enforced by `tsc`.
 

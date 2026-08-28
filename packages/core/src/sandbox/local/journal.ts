@@ -198,14 +198,24 @@ export const WRAPPER_SCRIPT: string = [
   //   watchdog: a TERM here is the wrapper saying the deadline is no longer needed, which is a
   //   different thing from the TERM the watchdog itself sends the group.
   //
-  //   `jobs -p` rather than `$nap`, because the TERM can arrive between starting the sleep and
-  //   assigning its pid — a command fast enough to finish before that assignment would leave
-  //   the nap orphaned, running out the whole budget with nobody left to reap it. Asking the
-  //   shell for its own background jobs has no such window: the job exists from the moment it
-  //   is started, whether or not a variable has caught its pid yet.
-  '    trap \'kill -9 $(jobs -p) 2>/dev/null ; exit 0\' TERM',
+  //   **Two traps, because a stand-down can arrive before there is a nap to stand down.** The
+  //   wrapper sends its TERM as soon as it has reaped the child, and for a command that
+  //   finishes instantly that can land before `nap=$!` has run — leaving a handler that kills
+  //   `$nap` with nothing in it, and a `sleep` orphaned for the whole budget. So the first
+  //   trap only records that the stand-down happened; it cannot exit, because exiting is what
+  //   strands the nap. The second replaces it once the pid is in hand, and the check between
+  //   them catches a stand-down that arrived while the first was installed. Every ordering is
+  //   covered: before the fork, between the fork and the assignment, and after.
+  //
+  //   `jobs -p` would look like the shorter answer and is not one: a command substitution runs
+  //   in a subshell, which does not inherit the job table, so under `dash` — Debian and Ubuntu's
+  //   `/bin/sh` — it expands to nothing and *every* stand-down leaks its nap.
+  '    standdown=',
+  '    trap \'standdown=1\' TERM',
   '    sleep "$budget" &',
   '    nap=$!',
+  '    trap \'kill -9 "$nap" 2>/dev/null ; exit 0\' TERM',
+  '    if [ -n "$standdown" ] ; then kill -9 "$nap" 2>/dev/null ; exit 0 ; fi',
   '    wait "$nap"',
   '    : > "$dir/timeout"',
   '    kill -TERM "-$wrapper" 2>/dev/null',
