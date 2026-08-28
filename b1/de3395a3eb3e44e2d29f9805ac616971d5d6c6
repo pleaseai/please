@@ -1,0 +1,37 @@
+packages/core/test/sandbox/local/backend.test.ts
+  s_82e04306492abb::t_7e3590b3258188 22-26,160-162
+packages/core/test/sandbox/docker/backend.test.ts
+  s_82e04306492abb::t_7e3590b3258188 17-21,114-116
+packages/core/src/sandbox/contract/index.ts
+  s_82e04306492abb::t_8dca6e3effdc10 16-20
+packages/core/src/sandbox/docker/index.ts
+  s_82e04306492abb::t_e33a921521a39c 9-12
+  s_82e04306492abb::t_7e3590b3258188 13
+packages/core/src/sandbox/local/files.ts
+  s_82e04306492abb::t_5aae2fd080a0da 26
+packages/core/src/sandbox/contract/types.ts
+  s_82e04306492abb::t_8dca6e3effdc10 131,242-267,269-272
+packages/core/src/sandbox/local/index.ts
+  s_82e04306492abb::t_7e3590b3258188 15
+  s_82e04306492abb::t_5aae2fd080a0da 11-14
+packages/core/src/sandbox/docker/files.ts
+  s_82e04306492abb::t_e33a921521a39c 17
+packages/core/test/sandbox/contract/errors.test.ts
+  s_82e04306492abb::t_c8c01c02e62bcf 1-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.23",
+  "base_commit_sha": "b1de3395a3eb3e44e2d29f9805ac616971d5d6c6",
+  "prompts": {},
+  "sessions": {
+    "s_82e04306492abb": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "973693a6-dc41-4e45-8433-a8a2daa91618",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Minsu Lee <minsu.lee@pleaseai.dev>"
+    }
+  }
+}
