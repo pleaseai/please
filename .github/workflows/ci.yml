@@ -62,7 +62,7 @@ jobs:
       # Tests may pass and a later step fail - still report what was measured
       - name: Upload coverage to Codecov
         if: ${{ !cancelled() && hashFiles('packages/*/coverage/lcov.info') != '' }}
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           files: ./packages/core/coverage/lcov.info,./packages/cli/coverage/lcov.info
           use_oidc: true
@@ -70,7 +70,7 @@ jobs:
       # Failed tests are what this reports, so it must run when the suite fails
       - name: Upload test results to Codecov
         if: ${{ !cancelled() && hashFiles('packages/*/test-report.junit.xml') != '' }}
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           report_type: test_results
           files: ./packages/core/test-report.junit.xml,./packages/cli/test-report.junit.xml
