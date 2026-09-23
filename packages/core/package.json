@@ -77,7 +77,7 @@
     "@ai-sdk/harness": "^1.0.91"
   },
   "devDependencies": {
-    "@ai-sdk/harness-claude-code": "^1.0.94",
+    "@ai-sdk/harness-claude-code": "^1.0.116",
     "just-bash": "^3.4.2",
     "microsandbox": "^0.6.15",
     "tsup": "^8",
