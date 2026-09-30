@@ -74,7 +74,7 @@
     }
   },
   "dependencies": {
-    "@ai-sdk/harness": "^1.0.91"
+    "@ai-sdk/harness": "^1.0.121"
   },
   "devDependencies": {
     "@ai-sdk/harness-claude-code": "^1.0.94",
