@@ -63,7 +63,7 @@
   },
   "peerDependencies": {
     "just-bash": "^3",
-    "microsandbox": "^0.6.15"
+    "microsandbox": "^0.7.2"
   },
   "peerDependenciesMeta": {
     "just-bash": {
@@ -79,7 +79,7 @@
   "devDependencies": {
     "@ai-sdk/harness-claude-code": "^1.0.94",
     "just-bash": "^3.4.2",
-    "microsandbox": "^0.6.15",
+    "microsandbox": "^0.7.2",
     "tsup": "^8",
     "typescript": "^6"
   }
